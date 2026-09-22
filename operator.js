@@ -595,5 +595,64 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
   });
 });
 
+// ══════════════════════════════════════════════════════════
+// TIMER & BLIND SETTINGS CONTROLLER
+// ══════════════════════════════════════════════════════════
+function openTimerSettings() {
+  document.getElementById('timer-blind-level').value = GAME_STATE.blindLevel || 1;
+  document.getElementById('timer-duration-min').value = Math.round((GAME_STATE.blindIntervalSecs || 900) / 60);
+
+  // Current blind countdown remaining
+  const remainSecs = getBlindCountdownSecs();
+  document.getElementById('timer-current-min').value = Math.floor(remainSecs / 60);
+  document.getElementById('timer-current-sec').value = Math.floor(remainSecs % 60);
+
+  // Total elapsed game time
+  const elapsedSecs = Math.floor((Date.now() - GAME_STATE.eventStartTime) / 1000);
+  document.getElementById('timer-elapsed-hour').value = Math.floor(elapsedSecs / 3600);
+  document.getElementById('timer-elapsed-min').value = Math.floor((elapsedSecs % 3600) / 60);
+
+  openModal('modal-timer');
+}
+
+async function saveTimerSettings() {
+  const newLevel = parseInt(document.getElementById('timer-blind-level').value) || 1;
+  const durationMin = parseInt(document.getElementById('timer-duration-min').value) || 15;
+  const curMin = parseInt(document.getElementById('timer-current-min').value) || 0;
+  const curSec = parseInt(document.getElementById('timer-current-sec').value) || 0;
+  const elpHour = parseInt(document.getElementById('timer-elapsed-hour').value) || 0;
+  const elpMin = parseInt(document.getElementById('timer-elapsed-min').value) || 0;
+
+  // Update Game State
+  GAME_STATE.blindLevel = newLevel;
+  GAME_STATE.blindIntervalSecs = durationMin * 60;
+
+  // Set remaining time on blind countdown
+  const desiredRemainSecs = (curMin * 60) + curSec;
+  const elapsedInLevel = Math.max(0, GAME_STATE.blindIntervalSecs - desiredRemainSecs);
+  GAME_STATE.lastBlindChangeTime = Date.now() - (elapsedInLevel * 1000);
+
+  // Set total elapsed game time
+  const desiredTotalElapsed = (elpHour * 3600) + (elpMin * 60);
+  GAME_STATE.eventStartTime = Date.now() - (desiredTotalElapsed * 1000);
+
+  saveLocalState();
+  closeModal('modal-timer');
+  renderPlayerCards();
+
+  // Sync to Supabase
+  await syncTournamentToSupabase();
+}
+
+async function resetTimerToStart() {
+  if (!confirm("Reset timer pertandingan ke 00:00:00 dan countdown level kembali penuh?")) return;
+
+  const durationMin = parseInt(document.getElementById('timer-duration-min').value) || 15;
+  document.getElementById('timer-current-min').value = durationMin;
+  document.getElementById('timer-current-sec').value = 0;
+  document.getElementById('timer-elapsed-hour').value = 0;
+  document.getElementById('timer-elapsed-min').value = 0;
+}
+
 // ── Start ─────────────────────────────────────────────────
 init();

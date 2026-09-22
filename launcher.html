@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POKER MES — Hub & Tournament Launcher</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              gold: '#eab308',
+              goldLight: '#fde047',
+              dark: '#07090e',
+              panel: '#0d111a',
+              card: '#121724',
+              cardHover: '#182032',
+              border: '#1e293b',
+              borderHighlight: '#334155',
+              cyan: '#38bdf8',
+              emerald: '#10b981'
+            }
+          },
+          fontFamily: {
+            display: ['"Chakra Petch"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            sans: ['"Plus Jakarta Sans"', 'sans-serif']
+          },
+          boxShadow: {
+            glowGold: '0 0 35px -5px rgba(234, 179, 8, 0.3)',
+            glowCyan: '0 0 30px -5px rgba(56, 189, 248, 0.25)',
+            glowGreen: '0 0 25px -5px rgba(16, 185, 129, 0.2)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #06080d;
+      background-image: 
+        radial-gradient(circle at 50% 15%, rgba(234, 179, 8, 0.07) 0%, transparent 60%),
+        radial-gradient(circle at 10% 80%, rgba(56, 189, 248, 0.04) 0%, transparent 50%),
+        linear-gradient(to bottom, #07090e 0%, #05060a 100%);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #0d111a; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #252e42; border-radius: 4px; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col justify-between selection:bg-brand-gold selection:text-black overflow-x-hidden">
+
+  <!-- TOP STATUS BAR -->
+  <header class="border-b border-brand-border/80 bg-brand-panel/70 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded bg-gradient-to-br from-brand-gold to-yellow-600 flex items-center justify-center font-display font-bold text-black text-lg tracking-wider shadow-glowGold">
+          M
+        </div>
+        <div>
+          <div class="font-display font-bold text-xl tracking-wider text-white flex items-center gap-2">
+            POKER <span class="text-brand-gold">MES</span>
+            <span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-brand-gold/10 border border-brand-gold/30 text-brand-goldLight tracking-normal">v2.4 PRO</span>
+          </div>
+          <p class="text-[11px] font-mono text-slate-400">TOURNAMENT OPERATOR & SCOREBOARD SYSTEM</p>
+        </div>
+      </div>
+
+      <!-- Quick Status Indicators -->
+      <div class="flex items-center gap-4 md:gap-6 text-xs font-mono">
+        <div class="hidden md:flex items-center gap-2 text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span>CLOUD: <strong class="text-emerald-400">SUPABASE REALTIME</strong></span>
+        </div>
+        <div class="hidden sm:flex items-center gap-3 border-l border-brand-border pl-5 text-slate-400">
+          <span>BROADCAST DISPLAY:</span>
+          <a href="index.html" target="_blank" class="px-2 py-0.5 rounded bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan text-[11px] font-bold hover:bg-brand-cyan/20 transition">1080p SYNC ↗</a>
+        </div>
+        <button onclick="resetToWelcome()" class="text-slate-400 hover:text-white transition flex items-center gap-1.5 hover:bg-slate-800/60 px-3 py-1.5 rounded text-xs border border-transparent hover:border-slate-700">
+          <i class="fa-solid fa-house text-slate-500"></i> Main Menu
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER (WIZARD STEPS) -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-8 flex flex-col justify-center">
+
+    <!-- PROGRESS BREADCRUMB -->
+    <div id="wizardBreadcrumb" class="hidden mb-6 flex items-center justify-center gap-3 text-xs font-mono">
+      <div id="pillStep1" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-700 bg-brand-panel text-slate-400">
+        <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold">1</span>
+        <span>WELCOME</span>
+      </div>
+      <i class="fa-solid fa-chevron-right text-[10px] text-slate-600"></i>
+      <div id="pillStep2" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-700 bg-brand-panel text-slate-400 transition-all">
+        <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold">2</span>
+        <span>PILIH GAME</span>
+      </div>
+      <i class="fa-solid fa-chevron-right text-[10px] text-slate-600"></i>
+      <div id="pillStep3" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-700 bg-brand-panel text-slate-400 transition-all">
+        <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold">3</span>
+        <span>SETUP POKER & RULES</span>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- STEP 1: WELCOME INTRO SCREEN                             -->
+    <!-- ======================================================== -->
+    <section id="stepWelcome" class="flex flex-col items-center justify-center text-center py-6 transition-all duration-300">
+      
+      <!-- Tournament Badge -->
+      <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-brand-gold/30 bg-brand-gold/5 text-brand-goldLight text-xs font-mono font-medium tracking-wide mb-6 shadow-glowGold">
+        <i class="fa-solid fa-crown text-brand-gold text-xs"></i>
+        <span>INDONESIA PRIVATE TEXAS HOLD'EM TOURNAMENT SYSTEM</span>
+      </div>
+
+      <!-- Hero Title -->
+      <h1 class="font-display font-black text-4xl sm:text-6xl md:text-7xl tracking-wider text-white uppercase mb-3">
+        Selamat Datang di <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-gold via-yellow-200 to-brand-gold">POKER MES</span>
+      </h1>
+      
+      <p class="max-w-2xl text-slate-400 text-sm sm:text-base font-normal mb-10 leading-relaxed">
+        Sistem manajemen turnamen live & digital scoreboard interaktif untuk layar display 1080p dengan integrasi real-time blind level, medal pot economy, dan kontrol operator instan.
+      </p>
+
+      <!-- Primary Action Cards / Buttons -->
+      <div class="w-full max-w-md flex flex-col gap-4">
+        
+        <!-- NEW GAME BUTTON -->
+        <button onclick="goToStep('stepPilihGame')" class="group relative w-full p-0.5 rounded-xl bg-gradient-to-r from-brand-gold via-yellow-400 to-amber-600 transition-all duration-300 hover:shadow-glowGold hover:scale-[1.02] active:scale-[0.99] text-left">
+          <div class="w-full bg-gradient-to-br from-brand-panel to-brand-card rounded-[10px] p-5 flex items-center justify-between border border-brand-gold/30">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-lg bg-brand-gold/10 border border-brand-gold/40 flex items-center justify-center text-brand-gold group-hover:bg-brand-gold group-hover:text-black transition duration-300 text-xl">
+                <i class="fa-solid fa-play"></i>
+              </div>
+              <div>
+                <div class="font-display font-bold text-2xl tracking-wider text-white group-hover:text-brand-gold transition">
+                  NEW GAME
+                </div>
+                <div class="text-xs text-slate-400 font-mono">
+                  Mulai turnamen baru, tentukan game & konfigurasi
+                </div>
+              </div>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:translate-x-1 transition duration-300">
+              <i class="fa-solid fa-arrow-right text-sm"></i>
+            </div>
+          </div>
+        </button>
+
+        <!-- LOAD GAME BUTTON -->
+        <button onclick="openLoadGameModal()" class="group w-full p-4 rounded-xl bg-brand-card hover:bg-brand-cardHover border border-brand-border hover:border-slate-500 transition-all duration-200 text-left flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-slate-800/60 border border-slate-700 flex items-center justify-center text-slate-300 group-hover:text-white text-xl">
+              <i class="fa-solid fa-folder-open"></i>
+            </div>
+            <div>
+              <div class="font-display font-bold text-xl tracking-wide text-slate-200 group-hover:text-white">
+                RESUME ACTIVE GAME
+              </div>
+              <div class="text-xs text-slate-400 font-mono">
+                Buka operator panel turnamen yang sedang berjalan
+              </div>
+            </div>
+          </div>
+          <div class="text-xs font-mono text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 rounded">
+            ACTIVE
+          </div>
+        </button>
+
+        <!-- Quick Links Direct to Views -->
+        <div class="pt-4 flex items-center justify-center gap-4 text-xs font-mono text-slate-500">
+          <a href="index.html" target="_blank" class="text-brand-cyan hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-tv"></i> Buka Public Scoreboard (TV)
+          </a>
+          <span>•</span>
+          <a href="operator.html" target="_blank" class="text-brand-gold hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-sliders"></i> Buka Operator Panel
+          </a>
+        </div>
+
+      </div>
+
+      <!-- Highlights Footer Featurettes -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl w-full mt-14 pt-8 border-t border-brand-border/60 text-left">
+        <div class="p-3.5 rounded-lg bg-brand-card/60 border border-brand-border/60">
+          <div class="flex items-center gap-2 text-brand-gold font-mono text-xs font-bold mb-1">
+            <i class="fa-solid fa-medal"></i> MEDAL ECONOMY
+          </div>
+          <p class="text-xs text-slate-400">Aturan pot medali kustom dengan kalkulasi nilai tukar center pot otomatis.</p>
+        </div>
+        <div class="p-3.5 rounded-lg bg-brand-card/60 border border-brand-border/60">
+          <div class="flex items-center gap-2 text-brand-cyan font-mono text-xs font-bold mb-1">
+            <i class="fa-solid fa-clock"></i> BLIND SCHEDULER
+          </div>
+          <p class="text-xs text-slate-400">SB kelipatan 25, BB kelipatan 50, dan custom timer durasi level fleksibel.</p>
+        </div>
+        <div class="p-3.5 rounded-lg bg-brand-card/60 border border-brand-border/60">
+          <div class="flex items-center gap-2 text-emerald-400 font-mono text-xs font-bold mb-1">
+            <i class="fa-solid fa-database"></i> SUPABASE REALTIME
+          </div>
+          <p class="text-xs text-slate-400">Sinkronisasi otomatis cloud tanpa jeda antara operator dan layar penonton.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- STEP 2: PILIH GAME                                       -->
+    <!-- ======================================================== -->
+    <section id="stepPilihGame" class="hidden flex-col items-center py-4 transition-all duration-300">
+      
+      <div class="w-full flex items-center justify-between mb-8 pb-4 border-b border-brand-border">
+        <div>
+          <span class="text-xs font-mono text-brand-gold uppercase tracking-wider font-bold">Langkah 1 dari 2</span>
+          <h2 class="font-display font-bold text-3xl sm:text-4xl text-white tracking-wide">PILIH MODE PERMAINAN</h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">Pilih jenis game kartu yang akan diselenggarakan dalam sesi ini.</p>
+        </div>
+        <button onclick="goToStep('stepWelcome')" class="text-xs font-mono text-slate-400 hover:text-white px-3 py-2 rounded border border-slate-700 bg-brand-panel hover:bg-slate-800 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-arrow-left"></i> Kembali
+        </button>
+      </div>
+
+      <!-- Game Selection Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+        
+        <!-- OPTION 1: POKER (TEXAS HOLD'EM) -->
+        <div onclick="goToStep('stepSetupPoker')" class="group relative cursor-pointer rounded-2xl bg-gradient-to-b from-brand-card to-brand-panel border-2 border-brand-gold/60 p-7 hover:border-brand-gold hover:shadow-glowGold transition-all duration-300 flex flex-col justify-between">
+          <div class="absolute -top-3 right-6 px-3 py-0.5 rounded-full bg-brand-gold text-black font-display font-bold text-xs uppercase tracking-wider shadow">
+            Tournament Ready
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-5">
+              <div class="w-14 h-14 rounded-xl bg-brand-gold/10 border border-brand-gold/40 flex items-center justify-center text-brand-gold text-3xl">
+                <i class="fa-solid fa-spade"></i>
+              </div>
+              <div class="text-right font-mono">
+                <span class="text-xs text-slate-400">FORMAT</span>
+                <div class="text-sm font-bold text-white">7 - 9 PLAYERS MAX</div>
+              </div>
+            </div>
+
+            <h3 class="font-display font-bold text-3xl text-white group-hover:text-brand-gold transition mb-2">
+              TEXAS HOLD'EM POKER
+            </h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed mb-6">
+              Mode turnamen penuh dengan dealer button rotasi (D), Small Blind (SB), Big Blind (BB), sistem medali pot center, re-buy last try, dan log aksi live.
+            </p>
+
+            <div class="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-300 mb-6 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-400"></i> SB 25 / BB 50 Stepping
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-400"></i> Ante & Medal Vault
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-400"></i> Live 1080p Scoreboard
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-400"></i> Supabase Cloud Sync
+              </div>
+            </div>
+          </div>
+
+          <button class="w-full py-3.5 rounded-xl bg-brand-gold hover:bg-yellow-400 text-black font-display font-bold text-sm tracking-wider uppercase transition duration-200 flex items-center justify-center gap-2 shadow-lg">
+            <span>Pilih Poker & Setup Meja</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- OPTION 2: BLACKJACK (21) -->
+        <div class="relative rounded-2xl bg-brand-card/40 border border-slate-800 p-7 flex flex-col justify-between opacity-80 hover:opacity-100 hover:border-slate-700 transition duration-200">
+          <div class="absolute -top-3 right-6 px-3 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 font-mono text-xs uppercase tracking-wider">
+            Coming Soon / Custom
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-5">
+              <div class="w-14 h-14 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-3xl">
+                <i class="fa-solid fa-club"></i>
+              </div>
+              <div class="text-right font-mono">
+                <span class="text-xs text-slate-500">FORMAT</span>
+                <div class="text-sm font-bold text-slate-300">TABLE VS DEALER</div>
+              </div>
+            </div>
+
+            <h3 class="font-display font-bold text-3xl text-slate-200 mb-2">
+              BLACKJACK (21)
+            </h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed mb-6">
+              Sistem penghitungan skor dealer shoe, payout 3:2 blackjack, split hands, double down, dan tracking chips individual pemain melawan bank.
+            </p>
+
+            <div class="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-400 mb-6 bg-slate-900/30 p-3 rounded-lg border border-slate-800/80">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-slate-500"></i> Shoe Count Tracker
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-slate-500"></i> Insurance Rules
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-slate-500"></i> Multiple Hands Split
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-clock text-brand-gold"></i> Ready in Next Patch
+              </div>
+            </div>
+          </div>
+
+          <button onclick="alert('Mode Blackjack saat ini sedang dalam finalisasi engine. Silakan pilih mode Poker!')" class="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-display font-bold text-sm tracking-wider uppercase transition duration-200 flex items-center justify-center gap-2 border border-slate-700">
+            <span>Pilih Blackjack</span>
+            <i class="fa-solid fa-lock text-xs text-slate-500"></i>
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- STEP 3: SETUP POKER & RULES                              -->
+    <!-- ======================================================== -->
+    <section id="stepSetupPoker" class="hidden flex-col py-2 transition-all duration-300">
+      
+      <!-- Section Header -->
+      <div class="w-full flex items-center justify-between mb-6 pb-4 border-b border-brand-border">
+        <div>
+          <span class="text-xs font-mono text-brand-gold uppercase tracking-wider font-bold">Langkah 2 dari 2</span>
+          <h2 class="font-display font-bold text-3xl text-white tracking-wide">SETUP PEMAIN & ATURAN TURNAMEN</h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">Konfigurasi roster peserta, blind structure (SB kelipatan 25, BB kelipatan 50), dan timer awal.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="goToStep('stepPilihGame')" class="text-xs font-mono text-slate-400 hover:text-white px-3 py-2 rounded border border-slate-700 bg-brand-panel hover:bg-slate-800 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-arrow-left"></i> Ganti Game
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- LEFT COLUMN: ROSTER PEMAIN (7-8 Players) -->
+        <div class="lg:col-span-7 flex flex-col gap-4">
+          <div class="bg-brand-panel border border-brand-border rounded-xl p-5">
+            
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-users text-brand-gold"></i>
+                <h3 class="font-display font-bold text-lg text-white tracking-wide">DAFTAR KURSI & PEMAIN</h3>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="loadDefaultRoster()" class="text-[11px] font-mono text-brand-cyan hover:underline bg-brand-cyan/10 px-2.5 py-1 rounded border border-brand-cyan/20">
+                  <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Default Roster
+                </button>
+                <button type="button" onclick="addPlayerRow()" class="text-[11px] font-mono text-brand-gold hover:underline bg-brand-gold/10 px-2.5 py-1 rounded border border-brand-gold/20">
+                  <i class="fa-solid fa-plus mr-1"></i> Tambah Kursi
+                </button>
+              </div>
+            </div>
+
+            <p class="text-xs text-slate-400 font-mono mb-4">
+              Urutan kursi menentukan rotasi Dealer (D), SB, dan BB pada Hand #1.
+            </p>
+
+            <!-- Player Table Form -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-800 pb-2">
+                    <th class="py-2 px-1 w-12 text-center">SEAT</th>
+                    <th class="py-2 px-2">NAMA PEMAIN</th>
+                    <th class="py-2 px-2 w-28">START CHIPS</th>
+                    <th class="py-2 px-2 w-20">MEDAL</th>
+                    <th class="py-2 px-1 w-16 text-center">POSISI #1</th>
+                    <th class="py-2 px-1 w-10 text-center">DEL</th>
+                  </tr>
+                </thead>
+                <tbody id="playerTableBody" class="divide-y divide-slate-800/80">
+                  <!-- Generated via JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Chips Summary -->
+            <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-mono text-slate-400">
+              <div>Total Pemain: <strong id="totalPlayersBadge" class="text-white">8 Orang</strong></div>
+              <div>Total Chips di Meja: <strong id="totalTableChips" class="text-brand-gold">11,400 CHIPS</strong></div>
+            </div>
+
+          </div>
+
+          <!-- Quick Tip -->
+          <div class="p-3.5 rounded-lg bg-slate-900/50 border border-slate-800 text-xs text-slate-400 flex items-start gap-3 font-mono">
+            <i class="fa-solid fa-circle-info text-brand-cyan text-sm mt-0.5"></i>
+            <div>
+              <strong class="text-slate-300">Tips Sinkronisasi:</strong> Saat Anda mengklik tombol "Mulai Turnamen", seluruh pemain dan konfigurasi blind/timer ini akan langsung disimpan ke Supabase Cloud.
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: BLINDS, ANTE, MEDAL RULES & TIMERS -->
+        <div class="lg:col-span-5 flex flex-col gap-4">
+          
+          <!-- BLINDS & TIMER CONFIG -->
+          <div class="bg-brand-panel border border-brand-border rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-4">
+              <i class="fa-solid fa-sliders text-brand-gold"></i>
+              <h3 class="font-display font-bold text-lg text-white tracking-wide">STRUKTUR BLIND & TIMER AWAL</h3>
+            </div>
+
+            <div class="space-y-4 text-xs font-mono">
+              
+              <!-- Small Blind & Big Blind -->
+              <div class="grid grid-cols-2 gap-3">
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+                  <label class="block text-slate-400 mb-1 text-[11px] font-bold">SMALL BLIND (SB)</label>
+                  <div class="flex items-center gap-1">
+                    <span class="text-slate-500">C</span>
+                    <input id="inputSB" type="number" value="25" step="25" min="25" onchange="onSBChange(this.value)" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-white font-bold text-sm focus:border-brand-gold focus:outline-none" />
+                  </div>
+                  <span class="text-[9px] text-slate-500 mt-1 block">Kelipatan 25</span>
+                </div>
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+                  <label class="block text-slate-400 mb-1 text-[11px] font-bold">BIG BLIND (BB)</label>
+                  <div class="flex items-center gap-1">
+                    <span class="text-slate-500">C</span>
+                    <input id="inputBB" type="number" value="50" step="50" min="50" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-white font-bold text-sm focus:border-brand-gold focus:outline-none" />
+                  </div>
+                  <span class="text-[9px] text-slate-500 mt-1 block">Kelipatan 50</span>
+                </div>
+              </div>
+
+              <!-- Starting Blind Level & Blind Duration -->
+              <div class="grid grid-cols-2 gap-3">
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+                  <label class="block text-slate-400 mb-1 text-[11px] font-bold">LEVEL AWAL</label>
+                  <select id="selectStartingLevel" class="w-full bg-slate-800 border border-slate-700 text-white rounded px-2 py-1.5 text-xs font-bold focus:border-brand-gold focus:outline-none">
+                    <option value="1" selected>Level 1 (25 / 50)</option>
+                    <option value="2">Level 2 (50 / 100)</option>
+                    <option value="3">Level 3 (75 / 150)</option>
+                    <option value="4">Level 4 (100 / 200)</option>
+                    <option value="5">Level 5 (125 / 250)</option>
+                  </select>
+                </div>
+                <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+                  <label class="block text-slate-400 mb-1 text-[11px] font-bold">DURASI LEVEL</label>
+                  <select id="selectBlindTimer" class="w-full bg-slate-800 border border-slate-700 text-white rounded px-2 py-1.5 text-xs font-bold focus:border-brand-gold focus:outline-none">
+                    <option value="10">10 Menit</option>
+                    <option value="15" selected>15 Menit</option>
+                    <option value="20">20 Menit</option>
+                    <option value="30">30 Menit</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Custom Initial Elapsed Timer -->
+              <div class="bg-slate-900/80 p-3.5 rounded-lg border border-slate-800">
+                <span class="text-slate-200 font-bold block text-xs mb-1">TIMER AWAL PERTANDINGAN</span>
+                <span class="text-[11px] text-slate-400 block mb-2">Set waktu pertandingan jika melanjutkan turnamen:</span>
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-1 flex-1">
+                    <input id="inputElapsedHour" type="number" min="0" max="23" value="0" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-white font-bold" />
+                    <span class="text-slate-500">Jam</span>
+                  </div>
+                  <div class="flex items-center gap-1 flex-1">
+                    <input id="inputElapsedMin" type="number" min="0" max="59" value="0" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-white font-bold" />
+                    <span class="text-slate-500">Mnt</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ANTE TOGGLE -->
+              <div class="bg-slate-900/80 p-3.5 rounded-lg border border-slate-800">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="text-slate-200 font-bold block text-sm">Gunakan Ante?</span>
+                    <span class="text-[11px] text-slate-400">Kontribusi wajib setiap pemain per ronde</span>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input id="checkboxAnte" type="checkbox" onchange="toggleAnteInput()" class="sr-only peer" />
+                    <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-gold"></div>
+                  </label>
+                </div>
+
+                <!-- Hidden Ante Value Input -->
+                <div id="anteValueContainer" class="hidden mt-3 pt-3 border-t border-slate-800 flex items-center justify-between">
+                  <span class="text-slate-300 text-xs">Nilai Ante per Pemain:</span>
+                  <div class="flex items-center gap-1 w-28">
+                    <span class="text-slate-500">C</span>
+                    <input id="inputAnteValue" type="number" value="25" step="5" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white font-bold text-xs focus:border-brand-gold focus:outline-none" />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- MEDAL VAULT & RE-BUY ECONOMY CONFIG -->
+          <div class="bg-brand-panel border border-brand-border rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-4">
+              <i class="fa-solid fa-medal text-brand-gold"></i>
+              <h3 class="font-display font-bold text-lg text-white tracking-wide">ATURAN MEDALI & PRIZE POOL</h3>
+            </div>
+
+            <div class="space-y-3 text-xs font-mono">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Total Medali di Vault Center:</span>
+                <input id="inputCenterMedals" type="number" value="25" class="w-20 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-right font-bold" />
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Nilai Rupiah per Medali:</span>
+                <div class="flex items-center gap-1 w-28">
+                  <span class="text-slate-500">Rp</span>
+                  <input id="inputRupiahPerMedal" type="number" value="2000" step="500" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-right font-bold" />
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Rate Rebuy (1 Medali = Chips):</span>
+                <input id="inputRebuyChips" type="number" value="400" step="50" class="w-20 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-right font-bold" />
+              </div>
+            </div>
+          </div>
+
+          <!-- LAUNCH ACTIONS -->
+          <div class="pt-2 flex flex-col gap-3">
+            <button id="btnLaunch" onclick="launchTournament()" class="w-full py-4 rounded-xl bg-gradient-to-r from-brand-gold via-yellow-400 to-amber-500 hover:shadow-glowGold text-black font-display font-bold text-base tracking-wider uppercase transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2.5">
+              <i class="fa-solid fa-rocket text-black text-lg"></i>
+              <span>MULAI TURNAMEN (LAUNCH SCOREBOARD)</span>
+            </button>
+
+            <button onclick="goToStep('stepWelcome')" class="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white font-mono text-xs transition border border-slate-800">
+              Batal & Kembali ke Menu Utama
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- MODAL: LOAD ACTIVE GAME -->
+  <div id="loadGameModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-brand-panel border border-brand-border rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+      <button onclick="closeLoadGameModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-lg bg-brand-gold/10 border border-brand-gold/30 flex items-center justify-center text-brand-gold text-lg">
+          <i class="fa-solid fa-floppy-disk"></i>
+        </div>
+        <div>
+          <h3 class="font-display font-bold text-xl text-white">SESI TURNAMEN AKTIF</h3>
+          <p class="text-xs font-mono text-slate-400">Pilih tampilan yang ingin Anda buka sekarang</p>
+        </div>
+      </div>
+
+      <div class="space-y-3 mb-6">
+        <div onclick="window.location.href='index.html'" class="p-3.5 rounded-xl bg-brand-card hover:bg-brand-cardHover border border-brand-border hover:border-brand-gold/60 cursor-pointer transition flex items-center justify-between group">
+          <div>
+            <div class="font-display font-bold text-white text-base group-hover:text-brand-gold transition">
+              PUBLIC DISPLAY (1080p TV SCOREBOARD)
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 mt-0.5">
+              Layar monitor penonton dan pemain dengan audio/visual full screen.
+            </div>
+          </div>
+          <span class="text-xs font-mono text-brand-gold px-2.5 py-1 rounded bg-brand-gold/10 border border-brand-gold/20">
+            BUKA TV ↗
+          </span>
+        </div>
+
+        <div onclick="window.location.href='operator.html'" class="p-3.5 rounded-xl bg-brand-card hover:bg-brand-cardHover border border-brand-border hover:border-brand-gold/60 cursor-pointer transition flex items-center justify-between group">
+          <div>
+            <div class="font-display font-bold text-white text-base group-hover:text-brand-gold transition">
+              OPERATOR PANEL (CONTROL ROOM)
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 mt-0.5">
+              Input hand, convert medali, edit chip, dan kontrol timer turnamen.
+            </div>
+          </div>
+          <span class="text-xs font-mono text-emerald-400 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/20">
+            OPERATOR ↗
+          </span>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button onclick="closeLoadGameModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM FOOTER -->
+  <footer class="border-t border-brand-border/60 bg-brand-panel/40 py-3 text-center text-slate-500 text-xs font-mono">
+    <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>POKER MES ENGINE &copy; 2026 • TEXAS HOLD'EM PRIVATE TOURNAMENT SUITE</div>
+      <div class="flex items-center gap-4 text-slate-400">
+        <span>STATUS: <strong class="text-emerald-400">ONLINE (SUPABASE SYNC)</strong></span>
+        <span>RESOLUTION: <strong class="text-slate-200">1920x1080 OPTIMIZED</strong></span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="supabase-config.js"></script>
+  <script src="game-state.js"></script>
+
+  <!-- CONTROLLER SCRIPT -->
+  <script>
+    let players = [
+      { id: 1, seat: '01', name: 'ANDI',  chips: 2450, medals: 6, position: 'D',  status: 'ready' },
+      { id: 2, seat: '02', name: 'FADLI', chips: 2100, medals: 4, position: 'SB', status: 'active' },
+      { id: 3, seat: '03', name: 'DENI',  chips: 1800, medals: 2, position: 'BB', status: 'active' },
+      { id: 4, seat: '04', name: 'BUDI',  chips: 1100, medals: 3, position: '',   status: 'active' },
+      { id: 5, seat: '05', name: 'HADI',  chips: 900,  medals: 2, position: '',   status: 'active' },
+      { id: 6, seat: '06', name: 'CACA',  chips: 650,  medals: 7, position: '',   status: 'active' },
+      { id: 7, seat: '07', name: 'EKO',   chips: 400,  medals: 1, position: '',   status: 'lasttry', lastTryUsed: true },
+      { id: 8, seat: '08', name: 'GITA',  chips: 0,    medals: 0, position: '',   status: 'eliminated', lastTryUsed: true }
+    ];
+
+    function goToStep(stepId) {
+      document.getElementById('stepWelcome').classList.add('hidden');
+      document.getElementById('stepPilihGame').classList.add('hidden');
+      document.getElementById('stepSetupPoker').classList.add('hidden');
+
+      const target = document.getElementById(stepId);
+      target.classList.remove('hidden');
+
+      const breadcrumb = document.getElementById('wizardBreadcrumb');
+      const pill1 = document.getElementById('pillStep1');
+      const pill2 = document.getElementById('pillStep2');
+      const pill3 = document.getElementById('pillStep3');
+
+      if (stepId === 'stepWelcome') {
+        breadcrumb.classList.add('hidden');
+      } else {
+        breadcrumb.classList.remove('hidden');
+        if (stepId === 'stepPilihGame') {
+          pill2.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand-gold bg-brand-panel text-brand-gold shadow-glowGold";
+          pill3.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-800 bg-brand-panel text-slate-500";
+        } else if (stepId === 'stepSetupPoker') {
+          pill2.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-700 bg-brand-panel text-slate-300";
+          pill3.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand-gold bg-brand-panel text-brand-gold shadow-glowGold";
+          renderPlayerTable();
+        }
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetToWelcome() {
+      goToStep('stepWelcome');
+    }
+
+    function onSBChange(val) {
+      const sb = parseInt(val) || 25;
+      document.getElementById('inputBB').value = sb * 2;
+    }
+
+    function toggleAnteInput() {
+      const checkbox = document.getElementById('checkboxAnte');
+      const container = document.getElementById('anteValueContainer');
+      if (checkbox.checked) {
+        container.classList.remove('hidden');
+      } else {
+        container.classList.add('hidden');
+      }
+    }
+
+    function renderPlayerTable() {
+      const tbody = document.getElementById('playerTableBody');
+      tbody.innerHTML = '';
+
+      let totalChips = 0;
+
+      players.forEach((p, idx) => {
+        totalChips += parseInt(p.chips || 0);
+
+        let posBadge = '<span class="text-slate-600">-</span>';
+        if (p.position === 'D') {
+          posBadge = '<span class="px-2 py-0.5 rounded bg-brand-gold text-black font-bold text-[10px]">D</span>';
+        } else if (p.position === 'SB') {
+          posBadge = '<span class="px-2 py-0.5 rounded bg-brand-cyan text-black font-bold text-[10px]">SB</span>';
+        } else if (p.position === 'BB') {
+          posBadge = '<span class="px-2 py-0.5 rounded bg-purple-400 text-black font-bold text-[10px]">BB</span>';
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="py-2.5 px-1 text-center font-bold text-slate-400">${p.seat}</td>
+          <td class="py-2.5 px-2">
+            <input type="text" value="${p.name}" onchange="updatePlayerName(${idx}, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-bold focus:border-brand-gold focus:outline-none uppercase" />
+          </td>
+          <td class="py-2.5 px-2">
+            <input type="number" step="50" value="${p.chips}" onchange="updatePlayerChips(${idx}, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-brand-gold font-bold focus:border-brand-gold focus:outline-none" />
+          </td>
+          <td class="py-2.5 px-2">
+            <input type="number" value="${p.medals}" onchange="updatePlayerMedals(${idx}, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-yellow-300 font-bold focus:border-brand-gold focus:outline-none" />
+          </td>
+          <td class="py-2.5 px-1 text-center">
+            ${posBadge}
+          </td>
+          <td class="py-2.5 px-1 text-center">
+            <button type="button" onclick="removePlayerRow(${idx})" class="text-slate-500 hover:text-red-400 transition">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('totalPlayersBadge').innerText = players.length + ' Orang';
+      document.getElementById('totalTableChips').innerText = totalChips.toLocaleString('id-ID') + ' CHIPS';
+    }
+
+    function updatePlayerName(index, val) {
+      players[index].name = val.toUpperCase();
+    }
+    function updatePlayerChips(index, val) {
+      players[index].chips = parseInt(val) || 0;
+      renderPlayerTable();
+    }
+    function updatePlayerMedals(index, val) {
+      players[index].medals = parseInt(val) || 0;
+    }
+
+    function removePlayerRow(index) {
+      if (players.length <= 2) {
+        alert('Minimal 2 pemain diperlukan untuk turnamen!');
+        return;
+      }
+      players.splice(index, 1);
+      players.forEach((p, idx) => {
+        p.id = idx + 1;
+        p.seat = (idx + 1).toString().padStart(2, '0');
+        if (idx === 0) p.position = 'D';
+        else if (idx === 1) p.position = 'SB';
+        else if (idx === 2) p.position = 'BB';
+        else p.position = '';
+      });
+      renderPlayerTable();
+    }
+
+    function addPlayerRow() {
+      if (players.length >= 10) {
+        alert('Maksimal 10 pemain per meja turnamen!');
+        return;
+      }
+      const newIndex = players.length + 1;
+      players.push({
+        id: newIndex,
+        seat: newIndex.toString().padStart(2, '0'),
+        name: `PLAYER ${newIndex}`,
+        chips: 1000,
+        medals: 2,
+        position: '',
+        status: 'active'
+      });
+      renderPlayerTable();
+    }
+
+    function loadDefaultRoster() {
+      players = [
+        { id: 1, seat: '01', name: 'ANDI',  chips: 2450, medals: 6, position: 'D',  status: 'ready' },
+        { id: 2, seat: '02', name: 'FADLI', chips: 2100, medals: 4, position: 'SB', status: 'active' },
+        { id: 3, seat: '03', name: 'DENI',  chips: 1800, medals: 2, position: 'BB', status: 'active' },
+        { id: 4, seat: '04', name: 'BUDI',  chips: 1100, medals: 3, position: '',   status: 'active' },
+        { id: 5, seat: '05', name: 'HADI',  chips: 900,  medals: 2, position: '',   status: 'active' },
+        { id: 6, seat: '06', name: 'CACA',  chips: 650,  medals: 7, position: '',   status: 'active' },
+        { id: 7, seat: '07', name: 'EKO',   chips: 400,  medals: 1, position: '',   status: 'lasttry', lastTryUsed: true },
+        { id: 8, seat: '08', name: 'GITA',  chips: 0,    medals: 0, position: '',   status: 'eliminated', lastTryUsed: true }
+      ];
+      renderPlayerTable();
+    }
+
+    function openLoadGameModal() {
+      document.getElementById('loadGameModal').classList.remove('hidden');
+    }
+    function closeLoadGameModal() {
+      document.getElementById('loadGameModal').classList.add('hidden');
+    }
+
+    async function launchTournament() {
+      const btn = document.getElementById('btnLaunch');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i> Menyimpan ke Cloud Supabase...`;
+
+      try {
+        const startLevel = parseInt(document.getElementById('selectStartingLevel').value) || 1;
+        const durationMin = parseInt(document.getElementById('selectBlindTimer').value) || 15;
+        const elpHour = parseInt(document.getElementById('inputElapsedHour').value) || 0;
+        const elpMin = parseInt(document.getElementById('inputElapsedMin').value) || 0;
+        const totalMedalsVal = parseInt(document.getElementById('inputCenterMedals').value) || 25;
+        const rupiahPerMedal = parseInt(document.getElementById('inputRupiahPerMedal').value) || 2000;
+
+        const sb = getSupabase();
+        
+        // 1. Update tournaments table
+        const totalElapsedSecs = (elpHour * 3600) + (elpMin * 60);
+        const eventStartTime = new Date(Date.now() - (totalElapsedSecs * 1000)).toISOString();
+        const lastBlindChangeTime = new Date().toISOString();
+
+        if (sb) {
+          await sb.from('tournaments').upsert({
+            id: 'current',
+            title: 'POKER MES',
+            hand: 1,
+            blind_level: startLevel,
+            blind_interval_secs: durationMin * 60,
+            event_start_time: eventStartTime,
+            last_blind_change_time: lastBlindChangeTime,
+            total_medals: totalMedalsVal,
+            center_medals: 11,
+            center_value: 11 * rupiahPerMedal,
+            total_prize: totalMedalsVal * rupiahPerMedal,
+            current_round: 'PRE-FLOP',
+            is_paused: false,
+            updated_at: new Date().toISOString()
+          });
+
+          // 2. Clear & Upsert players to Supabase
+          await sb.from('players').delete().neq('id', 0);
+          for (let i = 0; i < players.length; i++) {
+            const p = players[i];
+            await sb.from('players').upsert({
+              id: p.id || (i + 1),
+              name: p.name,
+              chips: p.chips,
+              medals: p.medals,
+              last_try_used: !!p.lastTryUsed,
+              status: p.status || 'active',
+              position_role: p.position || null,
+              current_action: p.position === 'D' ? 'DEALER' : (p.position === 'SB' ? 'SMALL BLIND' : (p.position === 'BB' ? 'BIG BLIND' : null)),
+              sort_order: i + 1,
+              updated_at: new Date().toISOString()
+            });
+          }
+        }
+
+        // Cache local state
+        GAME_STATE.hand = 1;
+        GAME_STATE.blindLevel = startLevel;
+        GAME_STATE.blindIntervalSecs = durationMin * 60;
+        GAME_STATE.eventStartTime = Date.now() - (totalElapsedSecs * 1000);
+        GAME_STATE.lastBlindChangeTime = Date.now();
+        GAME_STATE.totalMedals = totalMedalsVal;
+        saveLocalState();
+
+        alert("Turnamen POKER MES berhasil diinisialisasi ke Supabase!\n\nMembuka Public Scoreboard & Operator Panel...");
+        window.open('operator.html', '_blank');
+        window.location.href = 'index.html';
+      } catch (err) {
+        console.error("Launch error:", err);
+        alert("Terjadi kesalahan saat menghubungkan ke database: " + err.message);
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-rocket text-black text-lg"></i> MULAI TURNAMEN (LAUNCH SCOREBOARD)`;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -17,6 +17,7 @@
     <div class="op-header-left">
       <span class="op-brand">⚙ POKER <span class="op-brand-accent">MES</span></span>
       <span class="op-role-badge">OPERATOR PANEL</span>
+      <a href="launcher.html" class="op-btn op-btn-secondary op-btn-sm" style="text-decoration:none;">🏠 HUB</a>
     </div>
     <div class="op-header-center">
       <div class="op-info-chip">
@@ -31,12 +32,13 @@
         <span class="op-info-label">CENTER</span>
         <span class="op-info-value gold" id="op-center">11 🏅</span>
       </div>
-      <div class="op-info-chip">
-        <span class="op-info-label">TIMER</span>
-        <span class="op-info-value mono" id="op-timer">01:23:42</span>
+      <div class="op-info-chip" style="cursor: pointer;" onclick="openTimerSettings()" title="Klik untuk edit timer">
+        <span class="op-info-label">TIMER ⚙</span>
+        <span class="op-info-value mono" id="op-timer">00:00:00</span>
       </div>
     </div>
     <div class="op-header-right">
+      <button class="op-btn op-btn-secondary" onclick="openTimerSettings()">⏱ TIMER SETTINGS</button>
       <button class="op-btn op-btn-secondary" id="btn-pause" onclick="togglePause()">⏸ PAUSE</button>
       <button class="op-btn op-btn-gold" id="btn-newhand" onclick="openNewHand()">+ NEW HAND</button>
     </div>
@@ -122,14 +124,60 @@
     </div>
   </div>
 
-  <!-- ══════════════ BUST ALERT MODAL ══════════════ -->
-  <div class="modal-overlay" id="modal-bust" style="display:none">
+  <!-- ══════════════ TIMER SETTINGS MODAL ══════════════ -->
+  <div class="modal-overlay" id="modal-timer" style="display:none">
     <div class="modal modal-compact">
-      <div class="modal-body" id="bust-body">
-        <!-- Injected by JS -->
+      <div class="modal-header">
+        <div class="modal-title">⏱ TIMER & BLIND SETTINGS</div>
+        <button class="modal-close" onclick="closeModal('modal-timer')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label class="form-label">BLIND LEVEL SAAT INI</label>
+          <select class="form-select" id="timer-blind-level">
+            <option value="1">Level 1 (25 / 50)</option>
+            <option value="2">Level 2 (50 / 100)</option>
+            <option value="3">Level 3 (75 / 150)</option>
+            <option value="4">Level 4 (100 / 200)</option>
+            <option value="5">Level 5 (125 / 250)</option>
+            <option value="6">Level 6 (150 / 300)</option>
+            <option value="7">Level 7 (175 / 350)</option>
+            <option value="8">Level 8 (200 / 400)</option>
+            <option value="9">Level 9 (250 / 500)</option>
+            <option value="10">Level 10 (300 / 600)</option>
+            <option value="11">Level 11 (350 / 700)</option>
+            <option value="12">Level 12 (400 / 800)</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">DURASI TIAP LEVEL (MENIT)</label>
+          <input type="number" id="timer-duration-min" min="1" max="120" value="15" class="form-input" />
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">SISA WAKTU LEVEL SAAT INI (MENIT : DETIK)</label>
+          <div style="display:flex;gap:8px;">
+            <input type="number" id="timer-current-min" min="0" max="120" placeholder="Menit" class="form-input" style="flex:1;" />
+            <input type="number" id="timer-current-sec" min="0" max="59" placeholder="Detik" class="form-input" style="flex:1;" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">TOTAL ELAPSED GAME TIME (JAM : MENIT)</label>
+          <div style="display:flex;gap:8px;">
+            <input type="number" id="timer-elapsed-hour" min="0" placeholder="Jam" class="form-input" style="flex:1;" />
+            <input type="number" id="timer-elapsed-min" min="0" max="59" placeholder="Menit" class="form-input" style="flex:1;" />
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;margin-top:4px;">
+          <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="resetTimerToStart()">🔄 Reset Timer Awal</button>
+        </div>
       </div>
       <div class="modal-footer">
-        <button class="op-btn op-btn-gold full-width" onclick="closeModal('modal-bust')">CONTINUE →</button>
+        <button class="op-btn op-btn-secondary" onclick="closeModal('modal-timer')">BATAL</button>
+        <button class="op-btn op-btn-gold" onclick="saveTimerSettings()">SIMPAN & SYNC ✓</button>
       </div>
     </div>
   </div>
