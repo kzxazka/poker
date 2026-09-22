@@ -955,3 +955,91 @@ body {
   background: var(--border-mid);
   border-radius: 3px;
 }
+
+/* ── CUSTOM ALERT MODAL ─────────────────────────────────── */
+.modal-alert-box {
+  background: #0d121c;
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+}
+
+.modal-alert-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin: 0 auto 16px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.modal-alert-icon.gold {
+  background: var(--gold-bg);
+  border: 1px solid var(--border-accent);
+  color: var(--gold-light);
+}
+
+.modal-alert-icon.red {
+  background: var(--red-bg);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  color: var(--red);
+}
+
+.modal-alert-icon.green {
+  background: var(--green-bg);
+  border: 1px solid rgba(46, 198, 107, 0.4);
+  color: var(--green);
+}
+
+.modal-alert-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.modal-alert-msg {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 20px;
+  white-space: pre-line;
+}
+
+/* ── CLOUD CONNECTION STATUS BADGE ──────────────────────── */
+.op-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-family: var(--font-primary);
+  font-weight: 600;
+  background: rgba(46, 198, 107, 0.1);
+  border: 1px solid rgba(46, 198, 107, 0.25);
+  color: var(--green);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.op-sync-badge:hover {
+  background: rgba(46, 198, 107, 0.2);
+  border-color: rgba(46, 198, 107, 0.4);
+}
+
+.op-sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+}

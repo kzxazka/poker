@@ -252,31 +252,87 @@ function renderLastHand() {
   $lastHandDeltas.innerHTML = html;
 }
 
+// ── Recent Events Collapsible & Dropdown State ────────────
+let isRecentEventsOpen = true;
+let selectedHandFilter = 'all';
+
+function toggleRecentEvents() {
+  isRecentEventsOpen = !isRecentEventsOpen;
+  const body = document.getElementById('recent-events-collapsible');
+  const chevron = document.getElementById('recent-events-chevron');
+  if (body) {
+    if (isRecentEventsOpen) {
+      body.classList.remove('hidden');
+      chevron.classList.remove('-rotate-90');
+    } else {
+      body.classList.add('hidden');
+      chevron.classList.add('-rotate-90');
+    }
+  }
+}
+
+function onSelectEventHand(val) {
+  selectedHandFilter = val;
+  renderRecentEvents();
+}
+
 // ── Render Recent Events Widget ───────────────────────────
 function renderRecentEvents() {
   const container = $recentEventsLog;
-  if (!GAME_STATE.recentHands || GAME_STATE.recentHands.length === 0) {
-    container.innerHTML = `<div class="text-slate-500">No events yet</div>`;
+  const countEl = document.getElementById('recent-events-count');
+  const filterSelect = document.getElementById('recent-events-filter');
+
+  const allHands = GAME_STATE.recentHands || [];
+  if (countEl) countEl.textContent = allHands.length;
+
+  // Populate dropdown options if changed
+  if (filterSelect) {
+    const currentVal = filterSelect.value || 'all';
+    let optionsHtml = `<option value="all">Semua Hand (${Math.min(allHands.length, 5)})</option>`;
+    allHands.forEach(h => {
+      optionsHtml += `<option value="${h.hand}">Hand #${h.hand} (${h.winner})</option>`;
+    });
+    filterSelect.innerHTML = optionsHtml;
+    // Restore selection if still present
+    if (allHands.some(h => String(h.hand) === String(currentVal))) {
+      filterSelect.value = currentVal;
+    } else {
+      filterSelect.value = selectedHandFilter;
+    }
+  }
+
+  if (allHands.length === 0) {
+    container.innerHTML = `<div class="text-slate-500 py-2 text-center text-xs">Belum ada hand tercatat</div>`;
     return;
   }
 
+  let handsToDisplay = allHands;
+  if (selectedHandFilter !== 'all') {
+    handsToDisplay = allHands.filter(h => String(h.hand) === String(selectedHandFilter));
+  } else {
+    handsToDisplay = allHands.slice(0, 5);
+  }
+
   let html = '';
-  GAME_STATE.recentHands.slice(0, 4).forEach(h => {
+  handsToDisplay.forEach(h => {
     let lines = '';
-    lines += `<div class="text-slate-200 font-semibold">${h.winner} WON POT</div>`;
+    lines += `<div class="text-slate-200 font-bold flex items-center gap-1.5"><span class="text-brand-gold">🏆</span> ${h.winner} WON POT</div>`;
     (h.deltas || []).forEach(d => {
       if (d.name !== h.winner) {
         if (d.note) {
-          lines += `<div class="text-[#ef4444] font-bold">${d.name} ${d.note}</div>`;
+          lines += `<div class="text-[#ef4444] font-bold text-[10px] pl-5 flex items-center gap-1"><span>❌</span> ${d.name} ${d.note}</div>`;
         } else if (d.medals !== 0) {
-          lines += `<div class="text-[#f59e0b]">${d.name} ${d.medals} MEDAL${Math.abs(d.medals) > 1 ? 'S' : ''}</div>`;
+          lines += `<div class="text-[#f59e0b] text-[10px] pl-5 flex items-center gap-1"><span>🏅</span> ${d.name} ${d.medals} MEDAL${Math.abs(d.medals) > 1 ? 'S' : ''}</div>`;
         }
       }
     });
 
     html += `
-      <div class="border-l-2 border-[#1e2e45] pl-2.5">
-        <div class="text-[10px] text-[#4f6480] uppercase">HAND #${h.hand}</div>
+      <div class="border-l-2 border-[#22354f] hover:border-brand-gold pl-2.5 py-1 bg-[#0b121e]/50 rounded-r transition">
+        <div class="text-[10px] text-[#556d8f] uppercase font-bold flex items-center justify-between">
+          <span>HAND #${h.hand}</span>
+          <span class="text-[9px] text-slate-500 font-mono">COMPLETE</span>
+        </div>
         ${lines}
       </div>
     `;

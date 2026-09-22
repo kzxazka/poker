@@ -21,6 +21,85 @@ const $opCenter = document.getElementById('op-center');
 const $opTimer = document.getElementById('op-timer');
 const $playerGrid = document.getElementById('op-player-grid');
 const $log = document.getElementById('op-log');
+const $syncBadge = document.getElementById('op-sync-status');
+const $syncText = document.getElementById('op-sync-text');
+
+// ── Custom Alert & Confirmation System ────────────────────
+function showOpAlert(title, message, type = 'gold') {
+  const iconEl = document.getElementById('op-alert-icon');
+  const iconBox = document.getElementById('op-alert-icon-box');
+  const titleEl = document.getElementById('op-alert-title');
+  const msgEl = document.getElementById('op-alert-msg');
+  const actionsEl = document.getElementById('op-alert-actions');
+
+  titleEl.textContent = title;
+  msgEl.textContent = message;
+
+  iconBox.className = `modal-alert-icon ${type}`;
+  if (type === 'red') iconEl.textContent = '✕';
+  else if (type === 'green') iconEl.textContent = '✓';
+  else iconEl.textContent = 'ℹ';
+
+  actionsEl.innerHTML = `<button class="op-btn op-btn-gold" style="width:100%;" onclick="closeModal('modal-alert')">MENGERTI</button>`;
+  openModal('modal-alert');
+}
+
+function showOpConfirm(title, message, onConfirm, type = 'gold') {
+  const iconEl = document.getElementById('op-alert-icon');
+  const iconBox = document.getElementById('op-alert-icon-box');
+  const titleEl = document.getElementById('op-alert-title');
+  const msgEl = document.getElementById('op-alert-msg');
+  const actionsEl = document.getElementById('op-alert-actions');
+
+  titleEl.textContent = title;
+  msgEl.textContent = message;
+
+  iconBox.className = `modal-alert-icon ${type}`;
+  if (type === 'red') iconEl.textContent = '⚠️';
+  else iconEl.textContent = '❓';
+
+  actionsEl.innerHTML = `
+    <button class="op-btn op-btn-secondary" style="flex:1;" onclick="closeModal('modal-alert')">BATAL</button>
+    <button class="op-btn op-btn-gold" id="op-confirm-btn-yes" style="flex:1;">YA, LANJUTKAN</button>
+  `;
+
+  document.getElementById('op-confirm-btn-yes').onclick = () => {
+    closeModal('modal-alert');
+    if (typeof onConfirm === 'function') onConfirm();
+  };
+
+  openModal('modal-alert');
+}
+
+function updateSyncStatus(connected, text = null) {
+  if (!$syncBadge) return;
+  if (connected) {
+    $syncBadge.style.background = 'rgba(46, 198, 107, 0.1)';
+    $syncBadge.style.borderColor = 'rgba(46, 198, 107, 0.3)';
+    $syncBadge.style.color = 'var(--green)';
+    if ($syncText) $syncText.textContent = text || 'LIVE CONNECTED';
+  } else {
+    $syncBadge.style.background = 'rgba(231, 76, 60, 0.1)';
+    $syncBadge.style.borderColor = 'rgba(231, 76, 60, 0.3)';
+    $syncBadge.style.color = 'var(--red)';
+    if ($syncText) $syncText.textContent = text || 'DISCONNECTED';
+  }
+}
+
+// Explicit button to load or re-sync active game from Supabase
+async function loadActiveGame() {
+  if ($syncText) $syncText.textContent = 'SYNCING...';
+  try {
+    await fetchSupabaseState();
+    renderPlayerCards();
+    renderLog();
+    updateSyncStatus(true, 'LIVE CONNECTED');
+    showOpAlert('KONEKSI BERHASIL', `Berhasil menyambung ke game aktif Supabase!\nHand #${GAME_STATE.hand} • Level ${GAME_STATE.blindLevel} • ${GAME_STATE.players.length} Pemain`, 'green');
+  } catch (err) {
+    updateSyncStatus(false, 'SYNC ERROR');
+    showOpAlert('KONEKSI GAGAL', 'Tidak dapat mengambil game dari cloud:\n' + err.message, 'red');
+  }
+}
 
 // ── Init ──────────────────────────────────────────────────
 async function init() {
@@ -29,13 +108,28 @@ async function init() {
     renderLog();
   });
 
-  await fetchSupabaseState();
+  // 1. Direct fetch from Supabase to load active running game or last game
+  try {
+    updateSyncStatus(true, 'CONNECTING...');
+    await fetchSupabaseState();
+    updateSyncStatus(true, 'LIVE CONNECTED');
+  } catch (e) {
+    console.error("Operator Supabase init error:", e);
+    updateSyncStatus(false, 'OFFLINE (LOCAL)');
+  }
+
+  // 2. Real-time subscription
   subscribeToSupabase();
 
   renderPlayerCards();
   renderLog();
   tick();
   setInterval(tick, 1000);
+
+  // Auto-sync polling every 6 seconds as a robust fallback
+  setInterval(() => {
+    fetchSupabaseState();
+  }, 6000);
 }
 
 function tick() {
@@ -189,7 +283,7 @@ function toggleAllIn(playerId, chips) {
 function previewHand() {
   const winnerId = parseInt(document.getElementById('nh-winner').value);
   if (!winnerId) {
-    alert('Please select a winner.');
+    showOpAlert('PILIH PEMENANG', 'Silakan pilih pemenang hand terlebih dahulu sebelum melanjutkan konfirmasi.', 'gold');
     return;
   }
 
@@ -655,14 +749,19 @@ async function saveTimerSettings() {
   await syncTournamentToSupabase();
 }
 
-async function resetTimerToStart() {
-  if (!confirm("Reset timer pertandingan ke 00:00:00 dan countdown level kembali penuh?")) return;
-
-  const durationMin = parseInt(document.getElementById('timer-duration-min').value) || 15;
-  document.getElementById('timer-current-min').value = durationMin;
-  document.getElementById('timer-current-sec').value = 0;
-  document.getElementById('timer-elapsed-hour').value = 0;
-  document.getElementById('timer-elapsed-min').value = 0;
+function resetTimerToStart() {
+  showOpConfirm(
+    "RESET TIMER PERTANDINGAN",
+    "Apakah Anda yakin ingin mereset timer pertandingan ke 00:00:00 dan countdown durasi level kembali penuh?",
+    () => {
+      const durationMin = parseInt(document.getElementById('timer-duration-min').value) || 15;
+      document.getElementById('timer-current-min').value = durationMin;
+      document.getElementById('timer-current-sec').value = 0;
+      document.getElementById('timer-elapsed-hour').value = 0;
+      document.getElementById('timer-elapsed-min').value = 0;
+    },
+    'gold'
+  );
 }
 
 // ── Start ─────────────────────────────────────────────────

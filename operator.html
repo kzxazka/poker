@@ -17,6 +17,10 @@
     <div class="op-header-left">
       <span class="op-brand">⚙ POKER <span class="op-brand-accent">MES</span></span>
       <span class="op-role-badge">OPERATOR PANEL</span>
+      <button class="op-sync-badge" id="op-sync-status" onclick="loadActiveGame()" title="Klik untuk load/refresh game dari database Supabase">
+        <span class="op-sync-dot"></span>
+        <span id="op-sync-text">LIVE CONNECTED</span>
+      </button>
       <a href="launcher.html" class="op-btn op-btn-secondary op-btn-sm" style="text-decoration:none;">🏠 HUB</a>
     </div>
     <div class="op-header-center">
@@ -178,6 +182,20 @@
       <div class="modal-footer">
         <button class="op-btn op-btn-secondary" onclick="closeModal('modal-timer')">BATAL</button>
         <button class="op-btn op-btn-gold" onclick="saveTimerSettings()">SIMPAN & SYNC ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ CUSTOM ALERT / CONFIRM MODAL ══════════════ -->
+  <div class="modal-overlay" id="modal-alert" style="display:none">
+    <div class="modal-alert-box">
+      <div class="modal-alert-icon gold" id="op-alert-icon-box">
+        <span id="op-alert-icon">ℹ</span>
+      </div>
+      <div class="modal-alert-title" id="op-alert-title">PEMBERITAHUAN</div>
+      <div class="modal-alert-msg" id="op-alert-msg">Pesan alert operator...</div>
+      <div style="display:flex;gap:10px;justify-content:center;" id="op-alert-actions">
+        <button class="op-btn op-btn-gold" style="width:100%;" onclick="closeModal('modal-alert')">MENGERTI</button>
       </div>
     </div>
   </div>
