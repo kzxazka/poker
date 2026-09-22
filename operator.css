@@ -399,6 +399,114 @@ body {
   flex-wrap: wrap;
 }
 
+/* ── LIVE ACTION BUTTONS FOR OPERATOR ── */
+.op-card-action-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-card-alt);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.op-action-bar-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.op-action-btns-grid {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.op-btn-act {
+  flex: 1;
+  min-width: 44px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 5px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-mid);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.op-btn-act:hover {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+}
+
+.op-btn-act.act-fold {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+.op-btn-act.act-fold:hover, .op-btn-act.act-fold.is-current {
+  background: #1e293b;
+  border-color: #64748b;
+  color: #cbd5e1;
+  box-shadow: 0 0 8px rgba(100, 116, 139, 0.4);
+}
+
+.op-btn-act.act-check {
+  border-color: rgba(56, 189, 248, 0.3);
+}
+.op-btn-act.act-check:hover, .op-btn-act.act-check.is-current {
+  background: #082f49;
+  border-color: #0284c7;
+  color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+.op-btn-act.act-call {
+  border-color: rgba(46, 198, 107, 0.3);
+}
+.op-btn-act.act-call:hover, .op-btn-act.act-call.is-current {
+  background: #064e3b;
+  border-color: #059669;
+  color: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+
+.op-btn-act.act-raise {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.op-btn-act.act-raise:hover, .op-btn-act.act-raise.is-current {
+  background: #451a03;
+  border-color: #d97706;
+  color: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
+.op-btn-act.act-allin {
+  border-color: rgba(192, 132, 252, 0.3);
+}
+.op-btn-act.act-allin:hover, .op-btn-act.act-allin.is-current {
+  background: #3b0764;
+  border-color: #9333ea;
+  color: #c084fc;
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.4);
+}
+
+.op-btn-act.act-clear {
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+.op-btn-act.act-clear:hover {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: var(--red);
+  color: var(--red);
+}
+
 /* ── LOG PANEL ──────────────────────────────────────────── */
 .op-log-panel {
   overflow-y: auto;

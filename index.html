@@ -234,11 +234,12 @@
         </div>
       </div>
 
-      <!-- Widget 2: Recent Events Log (Collapsible / Dropdown Filter) -->
+      <!-- Widget 2: Recent Events Log (Collapsible / Dropdown Filter / Hide All) -->
       <div class="bg-[#090f18] border border-[#141e2e] rounded p-3 md:p-4 flex-1 transition-all" data-purpose="recent-events-card">
         <div class="flex items-center justify-between mb-2">
           <button id="recent-events-toggle" onclick="toggleRecentEvents()"
-            class="flex items-center gap-2 text-left group focus:outline-none">
+            class="flex items-center gap-2 text-left group focus:outline-none cursor-pointer py-1"
+            title="Klik untuk buka / sembunyikan semua Recent Events">
             <span class="text-[11px] font-mono tracking-wider text-[#576b85] group-hover:text-slate-200 uppercase font-bold transition flex items-center gap-1.5">
               <i id="recent-events-chevron" class="fa-solid fa-chevron-down text-[10px] text-brand-gold transition-transform duration-200"></i>
               Recent Events
@@ -248,11 +249,13 @@
             </span>
           </button>
           
-          <!-- Dropdown Filter: Select Hand -->
+          <!-- Dropdown Filter & Visibility Selector -->
           <div class="flex items-center gap-1.5">
             <select id="recent-events-filter" onchange="onSelectEventHand(this.value)"
-              class="bg-[#0e1625] border border-[#1e2f47] text-[#93a7c3] text-[10px] font-mono rounded px-2 py-0.5 focus:border-brand-gold focus:outline-none cursor-pointer">
+              class="bg-[#0e1625] border border-[#1e2f47] text-[#93a7c3] text-[10px] font-mono rounded px-2 py-0.5 focus:border-brand-gold focus:outline-none cursor-pointer"
+              title="Pilih filter hand atau sembunyikan tampilan events">
               <option value="all">Semua Hand (Recent)</option>
+              <option value="hide">✕ Sembunyikan (Hide Events)</option>
             </select>
           </div>
         </div>

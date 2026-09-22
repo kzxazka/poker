@@ -281,14 +281,54 @@ function buildPlayerCard(player) {
   const medalsStr = String(player.medals != null ? player.medals : 0);
 
   let actionsHtml = '';
+  let liveActionBarHtml = '';
+
+  const curAction = (player.currentAction || '').toUpperCase();
+  let actionBadge = '';
+  if (curAction) {
+    let actColor = '#94a3b8';
+    let actBg = 'rgba(148, 163, 184, 0.15)';
+    let actBorder = 'rgba(148, 163, 184, 0.3)';
+    if (curAction.includes('RAISE')) { actColor = '#fbbf24'; actBg = 'rgba(245, 158, 11, 0.15)'; actBorder = 'rgba(245, 158, 11, 0.35)'; }
+    else if (curAction.includes('CALL')) { actColor = '#34d399'; actBg = 'rgba(16, 185, 129, 0.15)'; actBorder = 'rgba(16, 185, 129, 0.35)'; }
+    else if (curAction.includes('CHECK')) { actColor = '#38bdf8'; actBg = 'rgba(56, 189, 248, 0.15)'; actBorder = 'rgba(56, 189, 248, 0.35)'; }
+    else if (curAction.includes('ALL-IN') || curAction.includes('ALLIN')) { actColor = '#c084fc'; actBg = 'rgba(192, 132, 252, 0.15)'; actBorder = 'rgba(192, 132, 252, 0.35)'; }
+    else if (curAction.includes('FOLD')) { actColor = '#94a3b8'; actBg = 'rgba(100, 116, 139, 0.15)'; actBorder = 'rgba(100, 116, 139, 0.3)'; }
+    else if (curAction.includes('DEALER') || curAction.includes('BLIND')) { actColor = '#e2e8f0'; actBg = 'rgba(255, 255, 255, 0.08)'; actBorder = 'rgba(255, 255, 255, 0.15)'; }
+
+    actionBadge = `<span style="font-size:10px;font-weight:800;letter-spacing:0.06em;color:${actColor};background:${actBg};border:1px solid ${actBorder};padding:2px 7px;border-radius:4px;margin-left:6px;">${curAction}</span>`;
+  }
+
   if (!isElim) {
+    const isFoldActive = curAction === 'FOLD';
+    const isCheckActive = curAction === 'CHECK';
+    const isCallActive = curAction === 'CALL';
+    const isRaiseActive = curAction === 'RAISE';
+    const isAllinActive = curAction === 'ALL-IN' || curAction === 'ALLIN';
+
+    liveActionBarHtml = `
+      <div class="op-card-action-bar">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="op-action-bar-label">ACTION RONDE / MEJA:</span>
+          ${curAction ? `<span style="font-size:9px;color:var(--text-muted);cursor:pointer;" onclick="setPlayerAction(${player.id}, null)" title="Hapus action">Clear ✕</span>` : ''}
+        </div>
+        <div class="op-action-btns-grid">
+          <button type="button" class="op-btn-act act-fold ${isFoldActive ? 'is-current' : ''}" onclick="setPlayerAction(${player.id}, 'FOLD')">FOLD</button>
+          <button type="button" class="op-btn-act act-check ${isCheckActive ? 'is-current' : ''}" onclick="setPlayerAction(${player.id}, 'CHECK')">CHECK</button>
+          <button type="button" class="op-btn-act act-call ${isCallActive ? 'is-current' : ''}" onclick="setPlayerAction(${player.id}, 'CALL')">CALL</button>
+          <button type="button" class="op-btn-act act-raise ${isRaiseActive ? 'is-current' : ''}" onclick="setPlayerAction(${player.id}, 'RAISE')">RAISE</button>
+          <button type="button" class="op-btn-act act-allin ${isAllinActive ? 'is-current' : ''}" onclick="setPlayerAction(${player.id}, 'ALL-IN')">ALL-IN</button>
+        </div>
+      </div>
+    `;
+
     actionsHtml = `
-      <div class="op-card-actions">
-        <button class="op-btn op-btn-secondary op-btn-sm" onclick="openConvert(${player.id})">
+      <div class="op-card-actions" style="margin-top:2px;">
+        <button class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="openConvert(${player.id})">
           🔄 Convert
         </button>
-        <button class="op-btn op-btn-secondary op-btn-sm" onclick="editPlayer(${player.id})">
-          ✏ Edit
+        <button class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="editPlayer(${player.id})">
+          ✏ Edit Player
         </button>
       </div>
     `;
@@ -296,7 +336,11 @@ function buildPlayerCard(player) {
 
   div.innerHTML = `
     <div class="op-card-top">
-      <div class="op-card-name">${player.name} ${roleBadge}</div>
+      <div class="op-card-name" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
+        <span>${player.name}</span>
+        ${roleBadge}
+        ${actionBadge}
+      </div>
       <div class="op-card-status ${badgeClass}">${badgeText}</div>
     </div>
     <div class="op-card-stats">
@@ -310,6 +354,7 @@ function buildPlayerCard(player) {
       </div>
     </div>
     ${player.lastTryUsed ? `<div style="font-size:10px;color:var(--amber);font-weight:600;letter-spacing:.1em;">⚠ LAST TRY USED</div>` : ''}
+    ${liveActionBarHtml}
     ${actionsHtml}
   `;
 
@@ -730,28 +775,95 @@ function confirmConvert() {
 }
 
 // ══════════════════════════════════════════════════════════
-// EDIT PLAYER (inline chips/medals adjustment)
+// LIVE PLAYER ACTIONS (FOLD, CHECK, CALL, RAISE, ALL-IN)
 // ══════════════════════════════════════════════════════════
-function editPlayer(playerId) {
+async function setPlayerAction(playerId, action) {
   const player = GAME_STATE.players.find(p => p.id === playerId);
   if (!player) return;
 
-  const newChips = prompt(`Edit chips for ${player.name} (current: ${player.chips}):`, player.chips);
-  if (newChips === null) return;
-  const chips = parseInt(newChips);
-  if (!isNaN(chips) && chips >= 0) player.chips = chips;
-
-  const newMedals = prompt(`Edit medals for ${player.name} (current: ${player.medals}):`, player.medals);
-  if (newMedals !== null) {
-    const medals = parseInt(newMedals);
-    if (!isNaN(medals) && medals >= 0) player.medals = medals;
+  // Toggle off if clicking the same action
+  if (player.currentAction === action) {
+    player.currentAction = null;
+  } else {
+    player.currentAction = action;
   }
 
   saveLocalState();
   renderPlayerCards();
 
+  // Instant sync to Supabase
+  try {
+    await syncPlayerToSupabase(player);
+  } catch (err) {
+    console.error("Error syncing player action:", err);
+  }
+}
+
+async function clearAllPlayerActions() {
+  GAME_STATE.players.forEach(p => {
+    p.currentAction = null;
+  });
+  saveLocalState();
+  renderPlayerCards();
+  
+  // Sync to Supabase
+  for (const p of GAME_STATE.players) {
+    syncPlayerToSupabase(p);
+  }
+  showOpAlert("ACTION DIRESET", "Semua status action pemain (Fold, Raise, Call, Check, All-in) berhasil dibersihkan untuk ronde baru.", "green");
+}
+
+// ══════════════════════════════════════════════════════════
+// EDIT PLAYER CUSTOM MODAL (Chips, Medals, Status, Action)
+// ══════════════════════════════════════════════════════════
+function editPlayer(playerId) {
+  const player = GAME_STATE.players.find(p => p.id === playerId);
+  if (!player) return;
+
+  document.getElementById('edit-player-id').value = player.id;
+  document.getElementById('edit-player-title-name').textContent = player.name;
+  document.getElementById('edit-player-chips').value = player.chips != null ? player.chips : 0;
+  document.getElementById('edit-player-medals').value = player.medals != null ? player.medals : 0;
+  document.getElementById('edit-player-status').value = player.status || 'active';
+  document.getElementById('edit-player-action').value = player.currentAction || '';
+
+  openModal('modal-edit-player');
+}
+
+async function savePlayerEdit() {
+  const id = parseInt(document.getElementById('edit-player-id').value);
+  const player = GAME_STATE.players.find(p => p.id === id);
+  if (!player) return;
+
+  const chipsVal = parseInt(document.getElementById('edit-player-chips').value);
+  const medalsVal = parseInt(document.getElementById('edit-player-medals').value);
+  const statusVal = document.getElementById('edit-player-status').value;
+  const actionVal = document.getElementById('edit-player-action').value.trim() || null;
+
+  if (!isNaN(chipsVal) && chipsVal >= 0) {
+    player.chips = chipsVal;
+  }
+  if (!isNaN(medalsVal) && medalsVal >= 0) {
+    player.medals = medalsVal;
+  }
+  if (statusVal) {
+    player.status = statusVal;
+    if (statusVal === 'lasttry') player.lastTryUsed = true;
+    if (statusVal === 'active' && player.chips > 0) player.lastTryUsed = false;
+  }
+  player.currentAction = actionVal;
+
+  saveLocalState();
+  renderPlayerCards();
+  closeModal('modal-edit-player');
+
   // Supabase sync
-  syncPlayerToSupabase(player);
+  try {
+    await syncPlayerToSupabase(player);
+    showOpAlert("DATA TERSIMPAN", `Data pemain ${player.name} berhasil diperbarui dan disinkronkan ke cloud!`, "green");
+  } catch (err) {
+    console.error("Error saving player edit:", err);
+  }
 }
 
 // ══════════════════════════════════════════════════════════

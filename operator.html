@@ -60,7 +60,15 @@
 
     <!-- LEFT: PLAYER CARDS -->
     <div class="op-players-panel">
-      <div class="op-panel-title">PLAYER STATUS</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="op-panel-title" style="margin-bottom:0;border-bottom:none;">PLAYER STATUS & LIVE ACTIONS</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="op-btn op-btn-secondary op-btn-sm" onclick="clearAllPlayerActions()" title="Reset semua action pemain ke status normal untuk ronde/hand baru">
+            🔄 RESET ACTIONS
+          </button>
+        </div>
+      </div>
+      <div style="border-bottom: 1px solid var(--border-subtle); margin: 6px 0 12px;"></div>
       <div class="op-player-grid" id="op-player-grid">
         <!-- Injected by JS -->
       </div>
@@ -200,6 +208,57 @@
       <div class="modal-footer">
         <button class="op-btn op-btn-secondary" onclick="closeModal('modal-timer')">BATAL</button>
         <button class="op-btn op-btn-gold" onclick="saveTimerSettings()">SIMPAN & SYNC ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ EDIT PLAYER MODAL (CHIPS, MEDALS & STATUS) ══════════════ -->
+  <div class="modal-overlay" id="modal-edit-player" style="display:none">
+    <div class="modal modal-compact">
+      <div class="modal-header">
+        <div class="modal-title">✏ EDIT PLAYER — <span id="edit-player-title-name" style="color:var(--gold-light);">PLAYER</span></div>
+        <button class="modal-close" onclick="closeModal('modal-edit-player')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-player-id" />
+        
+        <div class="form-row">
+          <label class="form-label">TOTAL CHIPS</label>
+          <input type="number" id="edit-player-chips" min="0" step="25" class="form-input" placeholder="Contoh: 1600" />
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">JUMLAH MEDALS (🏅)</label>
+          <input type="number" id="edit-player-medals" min="0" max="25" class="form-input" placeholder="Contoh: 0" />
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">STATUS PEMAIN</label>
+          <select class="form-select" id="edit-player-status">
+            <option value="active">ACTIVE (Bermain Normal)</option>
+            <option value="lasttry">LAST TRY USED (Kesempatan Terakhir)</option>
+            <option value="eliminated">ELIMINATED (Gugur / Out)</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">CURRENT TABLE ACTION (OPSIONAL)</label>
+          <select class="form-select" id="edit-player-action">
+            <option value="">- Tanpa Action / Normal -</option>
+            <option value="CALL">CALL</option>
+            <option value="RAISE">RAISE</option>
+            <option value="CHECK">CHECK</option>
+            <option value="FOLD">FOLD</option>
+            <option value="ALL-IN">ALL-IN</option>
+            <option value="DEALER">DEALER</option>
+            <option value="SMALL BLIND">SMALL BLIND</option>
+            <option value="BIG BLIND">BIG BLIND</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="op-btn op-btn-secondary" onclick="closeModal('modal-edit-player')">BATAL</button>
+        <button class="op-btn op-btn-gold" onclick="savePlayerEdit()">SIMPAN PERUBAHAN ✓</button>
       </div>
     </div>
   </div>

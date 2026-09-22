@@ -172,14 +172,34 @@ function buildPlayerCard(player, rankNum) {
     actionHtml = `<span class="inline-flex items-center px-2.5 py-1 rounded border border-[#12593b] bg-[#092218] text-[#10b981] text-xs font-mono font-bold tracking-wider">ACTIVE</span>`;
   }
 
-  const nameClass = isElim ? 'text-[#475569] line-through' : 'text-white';
+  // Action badge next to name
+  let nameActionBadge = '';
+  if (!isElim && player.currentAction) {
+    const act = player.currentAction.toUpperCase();
+    if (act.includes('RAISE')) {
+      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-extrabold bg-[#451a03] border border-[#d97706] text-[#fbbf24] shadow-[0_0_10px_rgba(245,158,11,0.3)] animate-pulse">RAISE</span>`;
+    } else if (act.includes('CALL')) {
+      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-extrabold bg-[#064e3b] border border-[#059669] text-[#34d399] shadow-[0_0_10px_rgba(16,185,129,0.3)]">CALL</span>`;
+    } else if (act.includes('CHECK')) {
+      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-extrabold bg-[#082f49] border border-[#0284c7] text-[#38bdf8]">CHECK</span>`;
+    } else if (act.includes('FOLD')) {
+      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#1e293b] border border-[#64748b] text-[#94a3b8]">FOLD</span>`;
+    } else if (act.includes('ALL-IN') || act.includes('ALLIN')) {
+      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-extrabold bg-[#3b0764] border border-[#9333ea] text-[#c084fc] shadow-[0_0_12px_rgba(192,132,252,0.4)] animate-bounce">ALL-IN</span>`;
+    } else if (!act.includes('DEALER') && !act.includes('BLIND')) {
+      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#141e2e] border border-[#23354e] text-slate-300">${player.currentAction}</span>`;
+    }
+  }
+
+  const nameClass = isElim ? 'text-[#475569] line-through' : (player.currentAction === 'FOLD' ? 'text-slate-400' : 'text-white');
 
   article.innerHTML = `
-    <!-- Left: Rank, Role, Name -->
-    <div class="flex items-center gap-3 md:gap-4 min-w-[200px] md:min-w-[240px]">
+    <!-- Left: Rank, Role, Name, Action Badge -->
+    <div class="flex items-center gap-3 md:gap-4 min-w-[200px] md:min-w-[260px] flex-wrap">
       <span class="text-sm font-mono font-bold text-[#44546d] w-6">${String(rankNum).padStart(2, '0')}</span>
       ${roleBadge}
       <span class="text-2xl md:text-3xl font-display font-bold tracking-wider ${nameClass}">${player.name}</span>
+      ${nameActionBadge}
     </div>
 
     <!-- Center: Chips & Medals -->
@@ -256,22 +276,41 @@ function renderLastHand() {
 let isRecentEventsOpen = true;
 let selectedHandFilter = 'all';
 
-function toggleRecentEvents() {
-  isRecentEventsOpen = !isRecentEventsOpen;
+function toggleRecentEvents(forceState = null) {
+  if (forceState !== null) {
+    isRecentEventsOpen = forceState;
+  } else {
+    isRecentEventsOpen = !isRecentEventsOpen;
+  }
   const body = document.getElementById('recent-events-collapsible');
   const chevron = document.getElementById('recent-events-chevron');
+  const filterSelect = document.getElementById('recent-events-filter');
+
   if (body) {
     if (isRecentEventsOpen) {
       body.classList.remove('hidden');
-      chevron.classList.remove('-rotate-90');
+      if (chevron) chevron.classList.remove('-rotate-90');
+      if (filterSelect && filterSelect.value === 'hide') {
+        filterSelect.value = 'all';
+        selectedHandFilter = 'all';
+      }
     } else {
       body.classList.add('hidden');
-      chevron.classList.add('-rotate-90');
+      if (chevron) chevron.classList.add('-rotate-90');
+      if (filterSelect) filterSelect.value = 'hide';
     }
   }
 }
 
 function onSelectEventHand(val) {
+  if (val === 'hide') {
+    toggleRecentEvents(false);
+    return;
+  }
+  // If previously hidden, re-open
+  if (!isRecentEventsOpen) {
+    toggleRecentEvents(true);
+  }
   selectedHandFilter = val;
   renderRecentEvents();
 }
@@ -292,9 +331,13 @@ function renderRecentEvents() {
     allHands.forEach(h => {
       optionsHtml += `<option value="${h.hand}">Hand #${h.hand} (${h.winner})</option>`;
     });
+    optionsHtml += `<option value="hide">✕ Sembunyikan (Hide Events)</option>`;
     filterSelect.innerHTML = optionsHtml;
+    
     // Restore selection if still present
-    if (allHands.some(h => String(h.hand) === String(currentVal))) {
+    if (currentVal === 'hide') {
+      filterSelect.value = 'hide';
+    } else if (allHands.some(h => String(h.hand) === String(currentVal))) {
       filterSelect.value = currentVal;
     } else {
       filterSelect.value = selectedHandFilter;
