@@ -114,7 +114,11 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.op-header-center::-webkit-scrollbar {
+  display: none;
 }
 
 .op-info-chip {

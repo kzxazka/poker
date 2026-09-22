@@ -1147,8 +1147,9 @@
         const sb = getSupabase();
 
         // 1. Update tournaments table
-        const countdownDurationSecs = (ctdHour * 3600) + (ctdMin * 60);
-        const eventStartTime = new Date().toISOString();
+        const countdownDurationSecs = (ctdHour * 3600) + (ctdMin * 60) || 7200;
+        const eventStartEpoch = Date.now() - ((7200 - countdownDurationSecs) * 1000);
+        const eventStartTime = new Date(eventStartEpoch).toISOString();
         const lastBlindChangeTime = new Date().toISOString();
 
         if (sb) {
@@ -1192,8 +1193,7 @@
         GAME_STATE.hand = 1;
         GAME_STATE.blindLevel = startLevel;
         GAME_STATE.blindIntervalSecs = durationMin * 60;
-        GAME_STATE.countdownTotalSecs = countdownDurationSecs;
-        GAME_STATE.eventStartTime = Date.now();
+        GAME_STATE.eventStartTime = eventStartEpoch;
         GAME_STATE.lastBlindChangeTime = Date.now();
         GAME_STATE.totalMedals = totalMedalsVal;
         saveLocalState();

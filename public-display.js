@@ -58,7 +58,35 @@ async function init() {
 }
 
 // ── Render Full UI ────────────────────────────────────────
+let lastRenderedBlindLevel = null;
+let blindsToastTimer = null;
+
+function showBlindsUpToast(level) {
+  const banner = document.getElementById('blinds-up-banner');
+  const text = document.getElementById('blinds-up-text');
+  if (!banner || !text) return;
+
+  const curBlind = getCurrentBlind();
+  text.textContent = `LEVEL ${level} — ${curBlind ? `${curBlind.sb} / ${curBlind.bb}` : ''}`;
+
+  banner.classList.remove('-translate-y-32', 'opacity-0', 'pointer-events-none');
+  banner.classList.add('translate-y-0', 'opacity-100');
+
+  if (blindsToastTimer) clearTimeout(blindsToastTimer);
+  blindsToastTimer = setTimeout(() => {
+    banner.classList.remove('translate-y-0', 'opacity-100');
+    banner.classList.add('-translate-y-32', 'opacity-0', 'pointer-events-none');
+  }, 6000);
+}
+
 function renderUI() {
+  // Check if blind level increased
+  if (lastRenderedBlindLevel !== null && GAME_STATE.blindLevel > lastRenderedBlindLevel) {
+    showBlindsUpToast(GAME_STATE.blindLevel);
+    playBlindChime();
+  }
+  lastRenderedBlindLevel = GAME_STATE.blindLevel;
+
   renderHeaderMetrics();
   renderPlayers();
   renderPositions();
@@ -409,8 +437,17 @@ function renderBlindSchedule() {
 }
 
 // ── Timer tick ────────────────────────────────────────────
-function tick() {
+async function tick() {
   if (GAME_STATE.isPaused) return;
+
+  // 1. Auto-advance blind level when countdown reaches 0
+  if (checkAndAdvanceBlindLevel()) {
+    saveLocalState();
+    renderUI();
+    showBlindsUpToast(GAME_STATE.blindLevel);
+    playBlindChime();
+    syncTournamentToSupabase();
+  }
 
   const countdownSecs = getEventCountdownSecs();
   $eventTimer.textContent = formatTime(countdownSecs);

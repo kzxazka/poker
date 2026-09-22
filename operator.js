@@ -132,19 +132,57 @@ async function init() {
   }, 6000);
 }
 
-function tick() {
+async function tick() {
   if (isPaused) return;
-  const countdownSecs = getEventCountdownSecs();
-  $opTimer.textContent = formatTime(countdownSecs);
-  if (countdownSecs < 300) {
-    $opTimer.style.color = 'var(--red)';
-  } else {
-    $opTimer.style.color = '';
+
+  // 1. Check auto-advance blind level when countdown reaches 0
+  if (checkAndAdvanceBlindLevel()) {
+    saveLocalState();
+    notifyStateChanged();
+    await syncTournamentToSupabase();
+    playBlindChime();
+    const curBlind = getCurrentBlind();
+    showOpAlert(
+      "BLIND LEVEL NAIK! 🔔",
+      `Waktu blind habis! Level otomatis naik ke Level ${GAME_STATE.blindLevel}\nSmall Blind: ${curBlind.sb} • Big Blind: ${curBlind.bb}\nLayar monitor publik langsung tersinkronisasi!`,
+      "gold"
+    );
   }
+
+  // 2. Tournament Match Countdown Timer
+  const countdownSecs = getEventCountdownSecs();
+  if ($opTimer) {
+    $opTimer.textContent = formatTime(countdownSecs);
+    if (countdownSecs < 300) {
+      $opTimer.style.color = 'var(--red)';
+    } else {
+      $opTimer.style.color = '';
+    }
+  }
+
+  // 3. Blind Countdown Timer (Next Blind In)
+  const blindSecs = getBlindCountdownSecs();
+  const $opBlindTimer = document.getElementById('op-blind-timer');
+  if ($opBlindTimer) {
+    $opBlindTimer.textContent = formatTime(blindSecs);
+    if (blindSecs < 60) {
+      $opBlindTimer.style.color = 'var(--red)';
+      $opBlindTimer.style.fontWeight = 'bold';
+    } else {
+      $opBlindTimer.style.color = '#f87171';
+      $opBlindTimer.style.fontWeight = 'normal';
+    }
+  }
+
+  // 4. Blind and Hand Info
   const blind = getCurrentBlind();
-  if (blind) $opBlind.textContent = `${blind.sb} / ${blind.bb}`;
-  $opHand.textContent = `#${GAME_STATE.hand}`;
-  $opCenter.textContent = `${GAME_STATE.centerMedals} 🏅`;
+  if (blind && $opBlind) {
+    $opBlind.textContent = `${blind.sb} / ${blind.bb}`;
+    const levelLabel = document.getElementById('op-blind-level-num');
+    if (levelLabel) levelLabel.textContent = `LEVEL ${GAME_STATE.blindLevel}`;
+  }
+  if ($opHand) $opHand.textContent = `#${GAME_STATE.hand}`;
+  if ($opCenter) $opCenter.textContent = `${GAME_STATE.centerMedals} 🏅`;
 
   const roundSelect = document.getElementById('op-round-select');
   if (roundSelect && document.activeElement !== roundSelect) {
@@ -215,21 +253,75 @@ function rollDealerManually() {
   );
 }
 
-// ── ADD TOURNAMENT TIME CONTROLLER ────────────────────────
+// ── TIME & BLIND CONTROLLERS (SYNCHRONIZED) ───────────────
 async function addTournamentTime(seconds) {
-  GAME_STATE.countdownTotalSecs = (GAME_STATE.countdownTotalSecs || (2 * 3600)) + seconds;
+  // Shifting eventStartTime forward increases remaining match countdown for ALL connected clients
+  GAME_STATE.eventStartTime = (GAME_STATE.eventStartTime || Date.now()) + (seconds * 1000);
   saveLocalState();
+  notifyStateChanged();
   await syncTournamentToSupabase();
   const mins = Math.round(seconds / 60);
-  showOpAlert("WAKTU DITAMBAHKAN", `Berhasil menambahkan +${mins} menit ke hitung mundur turnamen!`, "green");
+  showOpAlert("WAKTU MATCH DITAMBAHKAN", `Berhasil menambahkan +${mins} menit ke hitung mundur turnamen!\nMonitor publik langsung tersinkronisasi.`, "green");
 }
 
+async function addBlindTime(seconds) {
+  const curRemain = getBlindCountdownSecs();
+  const interval = GAME_STATE.blindIntervalSecs || 900;
+  if (curRemain <= 0) {
+    // If it was expired, give it `seconds` remaining:
+    const elapsed = Math.max(0, interval - seconds);
+    GAME_STATE.lastBlindChangeTime = Date.now() - (elapsed * 1000);
+  } else {
+    // Shift lastBlindChangeTime forward by `seconds * 1000`
+    GAME_STATE.lastBlindChangeTime = (GAME_STATE.lastBlindChangeTime || Date.now()) + (seconds * 1000);
+  }
+  saveLocalState();
+  notifyStateChanged();
+  await syncTournamentToSupabase();
+  const mins = Math.round(seconds / 60);
+  showOpAlert("WAKTU BLIND DITAMBAHKAN", `Berhasil menambahkan +${mins} menit ke sisa waktu level blind saat ini!\nMonitor publik langsung tersinkronisasi.`, "green");
+}
+
+async function changeBlindLevel(delta) {
+  const maxLevel = GAME_STATE.blindSchedule ? GAME_STATE.blindSchedule.length : 12;
+  const newLevel = (GAME_STATE.blindLevel || 1) + delta;
+  if (newLevel < 1 || newLevel > maxLevel) return;
+
+  GAME_STATE.blindLevel = newLevel;
+  GAME_STATE.lastBlindChangeTime = Date.now(); // Reset countdown for the new level
+  saveLocalState();
+  notifyStateChanged();
+  await syncTournamentToSupabase();
+  playBlindChime();
+  const cur = getCurrentBlind();
+  showOpAlert(
+    "BLIND LEVEL DIUBAH",
+    `Blind dialihkan ke Level ${newLevel} (${cur.sb} / ${cur.bb})!\nCountdown blind direset ke awal level dan langsung tampil di monitor depan.`,
+    "gold"
+  );
+}
+
+let pauseTimestamp = null;
 async function togglePause() {
   isPaused = !isPaused;
   GAME_STATE.isPaused = isPaused;
   const btn = document.getElementById('btn-pause');
-  btn.textContent = isPaused ? '▶ RESUME' : '⏸ PAUSE';
-  btn.style.color = isPaused ? 'var(--amber)' : '';
+  if (isPaused) {
+    pauseTimestamp = Date.now();
+    btn.textContent = '▶ RESUME';
+    btn.style.color = 'var(--amber)';
+  } else {
+    if (pauseTimestamp) {
+      const pausedMs = Date.now() - pauseTimestamp;
+      GAME_STATE.eventStartTime = (GAME_STATE.eventStartTime || Date.now()) + pausedMs;
+      GAME_STATE.lastBlindChangeTime = (GAME_STATE.lastBlindChangeTime || Date.now()) + pausedMs;
+      pauseTimestamp = null;
+    }
+    btn.textContent = '⏸ PAUSE';
+    btn.style.color = '';
+  }
+  saveLocalState();
+  notifyStateChanged();
   await syncTournamentToSupabase();
 }
 
@@ -1051,18 +1143,24 @@ async function saveTimerSettings() {
   const elapsedInLevel = Math.max(0, GAME_STATE.blindIntervalSecs - desiredRemainSecs);
   GAME_STATE.lastBlindChangeTime = Date.now() - (elapsedInLevel * 1000);
 
-  // Set countdown total and event start time
+  // Set countdown total and event start time (synchronized for all clients)
   const desiredRemainingCtd = (ctdHour * 3600) + (ctdMin * 60) + ctdSec;
-  GAME_STATE.countdownTotalSecs = desiredRemainingCtd;
-  GAME_STATE.eventStartTime = Date.now();
+  GAME_STATE.eventStartTime = Date.now() - ((7200 - desiredRemainingCtd) * 1000);
 
   saveLocalState();
   closeModal('modal-timer');
   renderPlayerCards();
+  notifyStateChanged();
 
   // Sync to Supabase
   await syncTournamentToSupabase();
-  showOpAlert("TIMER DISIMPAN", "Pengaturan blind level dan timer countdown turnamen berhasil diperbarui!", "green");
+  showOpAlert("TIMER DISIMPAN", "Pengaturan blind level dan timer countdown turnamen berhasil diperbarui dan disinkronkan ke monitor depan!", "green");
+}
+
+function resetBlindTimeToFull() {
+  const durationMin = parseInt(document.getElementById('timer-duration-min').value) || 15;
+  document.getElementById('timer-current-min').value = durationMin;
+  document.getElementById('timer-current-sec').value = 0;
 }
 
 function resetTimerToStart() {

@@ -185,22 +185,27 @@ function subscribeToSupabase() {
 async function syncTournamentToSupabase() {
   const sb = getSupabase();
   if (!sb) return;
-  await sb.from('tournaments').upsert({
-    id: 'current',
-    title: GAME_STATE.title,
-    hand: GAME_STATE.hand,
-    blind_level: GAME_STATE.blindLevel,
-    blind_interval_secs: GAME_STATE.blindIntervalSecs,
-    event_start_time: new Date(GAME_STATE.eventStartTime).toISOString(),
-    last_blind_change_time: new Date(GAME_STATE.lastBlindChangeTime).toISOString(),
-    total_medals: GAME_STATE.totalMedals,
-    center_medals: GAME_STATE.centerMedals,
-    center_value: GAME_STATE.centerValue,
-    total_prize: GAME_STATE.totalPrize,
-    current_round: GAME_STATE.currentRound,
-    is_paused: GAME_STATE.isPaused,
-    updated_at: new Date().toISOString()
-  });
+  try {
+    const { error } = await sb.from('tournaments').upsert({
+      id: 'current',
+      title: GAME_STATE.title,
+      hand: GAME_STATE.hand,
+      blind_level: GAME_STATE.blindLevel,
+      blind_interval_secs: GAME_STATE.blindIntervalSecs,
+      event_start_time: new Date(GAME_STATE.eventStartTime).toISOString(),
+      last_blind_change_time: new Date(GAME_STATE.lastBlindChangeTime).toISOString(),
+      total_medals: GAME_STATE.totalMedals,
+      center_medals: GAME_STATE.centerMedals,
+      center_value: GAME_STATE.centerValue,
+      total_prize: GAME_STATE.totalPrize,
+      current_round: GAME_STATE.currentRound,
+      is_paused: !!GAME_STATE.isPaused,
+      updated_at: new Date().toISOString()
+    });
+    if (error) console.error("Error syncing tournament to Supabase:", error);
+  } catch (err) {
+    console.error("Supabase sync exception:", err);
+  }
 }
 
 async function syncPlayerToSupabase(player) {
@@ -266,14 +271,58 @@ function getNextBlind() {
 }
 
 function getBlindCountdownSecs() {
-  const elapsed = (Date.now() - GAME_STATE.lastBlindChangeTime) / 1000;
-  return Math.max(0, GAME_STATE.blindIntervalSecs - elapsed);
+  const elapsed = (Date.now() - (GAME_STATE.lastBlindChangeTime || Date.now())) / 1000;
+  const interval = GAME_STATE.blindIntervalSecs || 900;
+  return Math.max(0, interval - elapsed);
 }
 
 function getEventCountdownSecs() {
-  const total = GAME_STATE.countdownTotalSecs || (2 * 3600);
-  const elapsed = (Date.now() - GAME_STATE.eventStartTime) / 1000;
-  return Math.max(0, total - elapsed);
+  // Baseline reference 2 hours (7200s). Shifting eventStartTime forward increases remaining countdown for all clients.
+  const baseline = 7200;
+  const elapsed = (Date.now() - (GAME_STATE.eventStartTime || Date.now())) / 1000;
+  return Math.max(0, baseline - elapsed);
+}
+
+// Automatically advance blind level when countdown reaches 0
+function checkAndAdvanceBlindLevel() {
+  if (GAME_STATE.isPaused) return false;
+  if (!GAME_STATE.blindSchedule || GAME_STATE.blindSchedule.length === 0) return false;
+  if (GAME_STATE.blindLevel >= GAME_STATE.blindSchedule.length) return false;
+
+  const remain = getBlindCountdownSecs();
+  if (remain <= 0) {
+    GAME_STATE.blindLevel += 1;
+    GAME_STATE.lastBlindChangeTime = Date.now();
+    return true;
+  }
+  return false;
+}
+
+// Web Audio API ascending chime for Blind Level Up alert
+function playBlindChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    
+    // Ascending celebratory chime notes: C5 (523Hz), E5 (659Hz), G5 (784Hz), C6 (1046Hz)
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.13);
+      gain.gain.setValueAtTime(0.22, now + i * 0.13);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.13 + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.13);
+      osc.stop(now + i * 0.13 + 0.38);
+    });
+  } catch (e) {
+    console.warn("Audio chime cannot play until user interacts:", e);
+  }
 }
 
 function formatTime(totalSecs) {
@@ -286,3 +335,4 @@ function formatTime(totalSecs) {
 function formatRupiah(n) {
   return 'Rp' + (n || 0).toLocaleString('id-ID');
 }
+
