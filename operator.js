@@ -23,7 +23,15 @@ const $playerGrid = document.getElementById('op-player-grid');
 const $log = document.getElementById('op-log');
 
 // ── Init ──────────────────────────────────────────────────
-function init() {
+async function init() {
+  onGameStateChange(() => {
+    renderPlayerCards();
+    renderLog();
+  });
+
+  await fetchSupabaseState();
+  subscribeToSupabase();
+
   renderPlayerCards();
   renderLog();
   tick();
@@ -40,11 +48,13 @@ function tick() {
   $opCenter.textContent = `${GAME_STATE.centerMedals} 🏅`;
 }
 
-function togglePause() {
+async function togglePause() {
   isPaused = !isPaused;
+  GAME_STATE.isPaused = isPaused;
   const btn = document.getElementById('btn-pause');
   btn.textContent = isPaused ? '▶ RESUME' : '⏸ PAUSE';
   btn.style.color = isPaused ? 'var(--amber)' : '';
+  await syncTournamentToSupabase();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -359,6 +369,11 @@ function confirmHand() {
   renderLog();
   closeModal('modal-confirm');
 
+  // Sync to Supabase
+  syncTournamentToSupabase();
+  GAME_STATE.players.forEach(p => syncPlayerToSupabase(p));
+  syncHandHistoryToSupabase(handRecord);
+
   // Handle busts sequentially
   if (bustedPlayers.length > 0) {
     handleBust(bustedPlayers, 0);
@@ -508,6 +523,9 @@ function confirmConvert() {
   saveState();
   renderPlayerCards();
   closeModal('modal-convert');
+
+  // Supabase sync
+  syncPlayerToSupabase(player);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -523,12 +541,16 @@ function editPlayer(playerId) {
   if (!isNaN(chips) && chips >= 0) player.chips = chips;
 
   const newMedals = prompt(`Edit medals for ${player.name} (current: ${player.medals}):`, player.medals);
-  if (newMedals === null) { saveState(); renderPlayerCards(); return; }
-  const medals = parseInt(newMedals);
-  if (!isNaN(medals) && medals >= 0) player.medals = medals;
+  if (newMedals !== null) {
+    const medals = parseInt(newMedals);
+    if (!isNaN(medals) && medals >= 0) player.medals = medals;
+  }
 
   saveState();
   renderPlayerCards();
+
+  // Supabase sync
+  syncPlayerToSupabase(player);
 }
 
 // ══════════════════════════════════════════════════════════

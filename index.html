@@ -2,178 +2,278 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>POKER MES – Live Tournament Scoreboard</title>
-  <link rel="stylesheet" href="public-display.css" />
+  <title>POKER MES - Live Tournament Display</title>
+
+  <!-- Tailwind CSS v3 with plugins -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <!-- Google Fonts for authentic tournament scoreboard typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#06090e',
+              panel: '#0a0f18',
+              card: '#0d1320',
+              border: '#182234',
+              'border-subtle': '#121a29',
+              gold: '#f59e0b',
+              'gold-bright': '#fbbf24',
+              'gold-light': '#fef08a',
+              emerald: '#10b981',
+              red: '#ef4444',
+              dim: '#526077'
+            }
+          },
+          fontFamily: {
+            sans: ['Rajdhani', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            display: ['"Chakra Petch"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style data-purpose="scoreboard-aesthetics">
+    body {
+      background-color: #06090e;
+      color: #e2e8f0;
+      font-family: 'Rajdhani', sans-serif;
+      user-select: none;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-thumb { background: #182234; border-radius: 2px; }
+
+    .tabular-numbers { font-variant-numeric: tabular-nums; }
+    .gold-glow { text-shadow: 0 0 12px rgba(245, 158, 11, 0.45); }
+    .green-glow { box-shadow: 0 0 10px rgba(16, 185, 129, 0.25); }
+    
+    .active-row-indicator { box-shadow: inset 3px 0 0 0 #10b981; }
+    .warning-row-indicator { box-shadow: inset 3px 0 0 0 #f59e0b; }
+    .eliminated-row-indicator { box-shadow: inset 3px 0 0 0 #7f1d1d; }
+
+    /* Responsive adjustments */
+    @media (max-width: 1280px) {
+      .header-metrics-group { flex-wrap: wrap; gap: 1rem; }
+    }
+  </style>
+
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body>
-  <div class="scoreboard" id="scoreboard">
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-amber-500 selection:text-black">
 
-    <!-- ═══════════════════════ HEADER ═══════════════════════ -->
-    <header class="header">
-      <div class="header-left">
-        <span class="brand">POKER <span class="brand-accent">MES</span></span>
-        <span class="event-label">TEXAS HOLD'EM · PRIVATE TOURNAMENT</span>
+  <!-- ═══════════════════════ MAIN HEADER ═══════════════════════ -->
+  <header class="w-full bg-[#080d15] border-b border-[#162030] px-4 md:px-6 py-3.5 shrink-0" data-purpose="tournament-top-bar">
+    <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand & Tournament Title -->
+      <div class="flex items-center gap-6" data-purpose="branding">
+        <div>
+          <h1 class="font-display font-bold text-2xl md:text-3xl tracking-wider text-white leading-none">
+            POKER <span class="text-brand-gold-bright">MES</span>
+          </h1>
+          <p class="text-[10px] md:text-[11px] font-mono tracking-widest text-[#5e708a] mt-1 uppercase font-semibold">
+            Texas Hold'em · Private Tournament
+          </p>
+        </div>
       </div>
 
-      <div class="header-right">
-        <div class="live-badge">
-          <span class="live-dot"></span>
+      <!-- Live Clock & Status Badge -->
+      <div class="flex items-center gap-3 md:gap-4 bg-[#0c121d] border border-[#172233] px-3 md:px-4 py-2 rounded" data-purpose="tournament-clock">
+        <div class="flex items-center gap-2 bg-[#092218] border border-[#12593b] px-2 py-0.5 rounded text-[11px] font-bold text-[#10b981] uppercase tracking-wider">
+          <span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
           LIVE
         </div>
-        <div class="timer-block">
-          <div class="timer-value" id="event-timer">01:23:42</div>
-          <div class="timer-next" id="blind-timer">NEXT BLIND IN <span id="blind-countdown">06:18</span></div>
+        <div class="text-right">
+          <div class="text-xl md:text-2xl font-bold font-mono tracking-wider text-white leading-none tabular-numbers" id="event-timer">
+            01:34:07
+          </div>
+          <div class="text-[9px] md:text-[10px] font-mono tracking-widest text-[#ef4444] font-semibold mt-0.5" id="blind-timer">
+            NEXT BLIND IN <span id="blind-countdown">06:18</span>
+          </div>
         </div>
       </div>
-    </header>
 
-    <!-- ═══════════════════════ MEDAL BAR ═══════════════════════ -->
-    <div class="medal-bar">
-      <div class="medal-item">
-        <div class="medal-icon">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" fill="#C9A227" opacity="0.15" />
-            <circle cx="12" cy="12" r="8" stroke="#C9A227" stroke-width="1.5" />
-            <circle cx="12" cy="12" r="4" fill="#C9A227" />
-          </svg>
-        </div>
-        <div class="medal-info">
-          <div class="medal-count-label">MEDALS IN CENTER</div>
-          <div class="medal-count-value" id="center-medals"><span class="medal-num">11</span> <span
-              class="medal-denom">/ 25</span></div>
-        </div>
-      </div>
-      <div class="medal-divider"></div>
-      <div class="medal-item">
-        <div class="medal-info">
-          <div class="medal-count-label">CENTER VALUE</div>
-          <div class="medal-prize" id="center-value">Rp22.000</div>
-        </div>
-      </div>
-      <div class="medal-divider"></div>
-      <div class="medal-item">
-        <div class="medal-info">
-          <div class="medal-count-label">TOTAL PRIZE POOL</div>
-          <div class="medal-prize medal-prize-total" id="total-prize">Rp50.000</div>
-        </div>
-      </div>
-      <div class="header-center">
-        <div class="blind-block">
-          <div class="blind-label-row">
-            <span class="blind-level">LEVEL 3</span>
-            <span class="blind-separator">·</span>
-            <span class="blind-next-label">NEXT: 100 / 200</span>
+      <!-- Center Financials and Pool Metrics -->
+      <div class="flex items-center gap-4 md:gap-8 flex-wrap header-metrics-group" data-purpose="table-metrics">
+        <!-- Medals In Center -->
+        <div class="flex items-center gap-3">
+          <div class="relative w-8 h-8 rounded-full border-2 border-brand-gold flex items-center justify-center text-brand-gold">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="6"></circle>
+            </svg>
           </div>
-          <div class="blind-values">
-            <span class="blind-main" id="blind-display">75 / 150</span>
+          <div>
+            <div class="text-[10px] md:text-[11px] font-bold tracking-widest text-[#5e708a] uppercase">Medals in Center</div>
+            <div class="text-xl md:text-2xl font-display font-bold tracking-wider text-white" id="center-medals">
+              <span class="text-brand-gold-bright">11</span> <span class="text-[#3c4b62] font-normal">/</span> 25
+            </div>
           </div>
-          <div class="blind-sub">SB &nbsp;/&nbsp; BB</div>
+        </div>
+
+        <!-- Divider -->
+        <div class="hidden sm:block h-8 w-px bg-[#162030]"></div>
+
+        <!-- Center Value -->
+        <div>
+          <div class="text-[10px] md:text-[11px] font-bold tracking-widest text-[#5e708a] uppercase">Center Value</div>
+          <div class="text-xl md:text-2xl font-bold font-mono text-white tracking-tight" id="center-value">
+            Rp22.000
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="hidden sm:block h-8 w-px bg-[#162030]"></div>
+
+        <!-- Total Prize Pool -->
+        <div>
+          <div class="text-[10px] md:text-[11px] font-bold tracking-widest text-[#5e708a] uppercase">Total Prize Pool</div>
+          <div class="text-xl md:text-2xl font-bold font-mono text-brand-gold-bright gold-glow tracking-tight" id="total-prize">
+            Rp50.000
+          </div>
         </div>
       </div>
-      <div class="medal-bar-right">
-        <div class="hand-badge">HAND <span id="hand-num">#24</span></div>
+
+      <!-- Blind Level & Hand Counter Badges -->
+      <div class="flex items-center gap-3 md:gap-4" data-purpose="level-and-hand-badge">
+        <!-- Blind Box -->
+        <div class="bg-[#0e1624] border border-[#1a293f] rounded px-3 md:px-4 py-1.5 text-center min-w-[120px]">
+          <div class="text-[9px] md:text-[10px] font-mono font-semibold tracking-wider text-[#6d82a2] uppercase" id="blind-level-info">
+            Level 3 <span class="text-[#3f4f66]">•</span> Next: 100 / 200
+          </div>
+          <div class="text-xl md:text-2xl font-display font-bold text-brand-gold-bright leading-tight tracking-wider" id="blind-display">
+            75 <span class="text-[#4e5d75] font-light">/</span> 150
+          </div>
+          <div class="text-[8px] md:text-[9px] font-mono tracking-widest text-[#52637a] uppercase font-semibold">
+            SB / BB
+          </div>
+        </div>
+
+        <!-- Hand Indicator -->
+        <div class="bg-[#0b121e] border border-[#1d2a40] px-3 md:px-4 py-2.5 rounded text-center">
+          <div class="flex items-center gap-1.5 justify-center mb-0.5">
+            <span class="text-[9px] font-mono font-bold bg-[#1e2e45] text-cyan-400 px-1.5 py-0.5 rounded uppercase tracking-wider" id="round-indicator">PRE-FLOP</span>
+            <span class="text-[11px] font-mono font-bold text-[#f59e0b]" id="dealer-indicator">D: ANDI</span>
+          </div>
+          <div class="text-base md:text-lg font-display font-bold tracking-widest text-slate-200 uppercase whitespace-nowrap">
+            HAND <span class="text-white" id="hand-num">#24</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
+  <main class="w-full max-w-[1920px] mx-auto px-4 md:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 items-start" data-purpose="tournament-body">
+
+    <!-- LEFT COLUMN: Player Standings Board (9 of 12 cols on desktop) -->
+    <section class="lg:col-span-9 flex flex-col gap-2.5" data-purpose="player-standings-section">
+      <div class="flex items-center justify-between px-1 mb-1">
+        <span class="text-[11px] font-mono uppercase tracking-widest text-[#5b6f8a] font-bold">Player Standings</span>
+        <span class="text-[11px] font-mono text-[#5b6f8a] flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping"></span> Live Cloud Sync
+        </span>
+      </div>
+
+      <!-- Player List Container (dynamically rendered from Supabase) -->
+      <div class="flex flex-col gap-2.5" id="player-list">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Sidebar (Hand Details, Event Logs, Blinds) (3 of 12 cols) -->
+    <aside class="lg:col-span-3 flex flex-col gap-3.5" data-purpose="sidebar-panels">
+
+      <!-- Table Positions & Action Widget -->
+      <div class="bg-[#090f18] border border-[#141e2e] rounded p-3 text-xs font-mono">
+        <div class="flex items-center justify-between text-[10px] tracking-wider text-[#576b85] uppercase mb-2 font-bold">
+          <span>Table Positions & Action</span>
+          <span class="text-[#10b981] animate-pulse" id="side-round-status">ROUND: PRE-FLOP</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center" id="table-positions-grid">
+          <div class="bg-[#0c121d] border border-[#854d0e] rounded py-1 px-1.5">
+            <div class="text-[9px] text-[#eab308] font-bold">DEALER (D)</div>
+            <div class="text-white font-bold text-xs truncate" id="pos-dealer">ANDI</div>
+          </div>
+          <div class="bg-[#0c121d] border border-[#1e4976] rounded py-1 px-1.5">
+            <div class="text-[9px] text-[#38bdf8] font-bold">SMALL BLIND</div>
+            <div class="text-white font-bold text-xs truncate" id="pos-sb">FADLI</div>
+          </div>
+          <div class="bg-[#0c121d] border border-[#4c2889] rounded py-1 px-1.5">
+            <div class="text-[9px] text-[#c084fc] font-bold">BIG BLIND</div>
+            <div class="text-white font-bold text-xs truncate" id="pos-bb">DENI</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Widget 1: Last Hand Summary -->
+      <div class="bg-[#090f18] border border-[#141e2e] rounded p-4" data-purpose="last-hand-card">
+        <div class="flex items-center justify-between text-[11px] font-mono tracking-wider text-[#576b85] uppercase mb-2">
+          <span id="last-hand-title">Last Hand · #23</span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-3">
+          <span class="text-xs font-bold uppercase tracking-widest text-[#6c829f]">Winner</span>
+          <span class="text-2xl font-display font-bold text-brand-gold-bright tracking-wider" id="last-hand-winner">ANDI</span>
+        </div>
+        <div class="space-y-1 text-xs font-mono" id="last-hand-deltas">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Widget 2: Recent Events Log -->
+      <div class="bg-[#090f18] border border-[#141e2e] rounded p-4 flex-1" data-purpose="recent-events-card">
+        <div class="text-[11px] font-mono tracking-wider text-[#576b85] uppercase mb-3 font-bold">
+          Recent Events
+        </div>
+        <div class="space-y-3 text-[11px] font-mono" id="recent-events-log">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Widget 3: Blind Schedule -->
+      <div class="bg-[#090f18] border border-[#141e2e] rounded p-4" data-purpose="blind-schedule-card">
+        <div class="text-[11px] font-mono tracking-wider text-[#576b85] uppercase mb-2 font-bold">
+          Blind Schedule
+        </div>
+        <div class="space-y-1.5 font-mono text-xs" id="blind-schedule-list">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- ═══════════════════════ MAIN FOOTER ═══════════════════════ -->
+  <footer class="w-full bg-[#05080c] border-t border-[#131b27] px-4 md:px-6 py-2.5 shrink-0 text-xs font-mono" data-purpose="tournament-footer">
+    <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-2 text-[#47576f]">
+      <!-- Left Tournament Meta -->
+      <div class="tracking-widest uppercase text-[10px] md:text-xs" id="footer-meta">
+        POKER MES · PRIVATE TOURNAMENT
+      </div>
+      <!-- Right Operator Link -->
+      <div class="flex items-center gap-2">
+        <a class="inline-flex items-center gap-1.5 px-3 py-1 rounded border border-[#1a2537] hover:border-[#2f405c] text-[#7186a5] hover:text-white transition-all bg-[#080d14]" href="operator.html" target="_blank">
+          <span>⚙</span> OPERATOR PANEL
+        </a>
       </div>
     </div>
+  </footer>
 
-    <!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
-    <div class="main-content">
-
-      <!-- PLAYER SCOREBOARD -->
-      <section class="scoreboard-section">
-        <div class="section-title">PLAYER STANDINGS</div>
-        <div class="player-list" id="player-list"></div>
-      </section>
-
-      <!-- SIDE PANEL -->
-      <aside class="side-panel">
-
-        <!-- LAST HAND RESULT -->
-        <div class="side-card last-hand-card">
-          <div class="side-card-title">LAST HAND · #23</div>
-          <div class="last-hand-winner">
-            <span class="winner-label">WINNER</span>
-            <span class="winner-name">ANDI</span>
-          </div>
-          <div class="last-hand-deltas">
-            <div class="delta delta-positive">
-              <span class="delta-player">ANDI</span>
-              <span class="delta-value">+3 🏅</span>
-            </div>
-            <div class="delta delta-negative">
-              <span class="delta-player">BUDI</span>
-              <span class="delta-value">−2 🏅</span>
-            </div>
-            <div class="delta delta-negative">
-              <span class="delta-player">DENI</span>
-              <span class="delta-value">−1 🏅</span>
-            </div>
-            <div class="delta delta-neutral">
-              <span class="delta-player">CENTER</span>
-              <span class="delta-value">−1 🏅</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- EVENT TICKER -->
-        <div class="side-card event-ticker-card">
-          <div class="side-card-title">RECENT EVENTS</div>
-          <div class="event-ticker" id="event-ticker">
-            <div class="ticker-item">
-              <div class="ticker-hand">HAND #23</div>
-              <div class="ticker-line ticker-win">ANDI WON POT</div>
-              <div class="ticker-line ticker-loss">BUDI −2 MEDALS</div>
-              <div class="ticker-line ticker-loss">DENI −1 MEDAL</div>
-            </div>
-            <div class="ticker-item">
-              <div class="ticker-hand">HAND #22</div>
-              <div class="ticker-line ticker-win">FADLI WON POT</div>
-              <div class="ticker-line ticker-loss">CACA −1 MEDAL</div>
-            </div>
-            <div class="ticker-item">
-              <div class="ticker-hand">HAND #21</div>
-              <div class="ticker-line ticker-win">BUDI WON POT</div>
-              <div class="ticker-line ticker-neutral">CENTER −1 MEDAL</div>
-            </div>
-            <div class="ticker-item">
-              <div class="ticker-hand">HAND #20</div>
-              <div class="ticker-line ticker-special">GITA ELIMINATED</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- BLIND SCHEDULE -->
-        <div class="side-card blind-schedule-card">
-          <div class="side-card-title">BLIND SCHEDULE</div>
-          <div class="blind-schedule">
-            <div class="bs-row bs-past"><span class="bs-level">L1</span><span class="bs-val">25 / 50</span></div>
-            <div class="bs-row bs-past"><span class="bs-level">L2</span><span class="bs-val">50 / 100</span></div>
-            <div class="bs-row bs-current"><span class="bs-level">L3</span><span class="bs-val">75 / 150</span><span
-                class="bs-now">NOW</span></div>
-            <div class="bs-row bs-future"><span class="bs-level">L4</span><span class="bs-val">100 / 200</span></div>
-            <div class="bs-row bs-future"><span class="bs-level">L5</span><span class="bs-val">150 / 300</span></div>
-            <div class="bs-row bs-future"><span class="bs-level">L6</span><span class="bs-val">200 / 400</span></div>
-          </div>
-        </div>
-
-      </aside>
-    </div>
-
-    <!-- ═══════════════════════ FOOTER ═══════════════════════ -->
-    <footer class="footer">
-      <span class="footer-text">EVENT GOCAP · PRIVATE TOURNAMENT · <span id="footer-date"></span></span>
-      <a href="operator.html" class="op-link" target="_blank">⚙ OPERATOR PANEL</a>
-    </footer>
-
-  </div>
-
+  <script src="supabase-config.js"></script>
   <script src="game-state.js"></script>
   <script src="public-display.js"></script>
 </body>

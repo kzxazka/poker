@@ -1,11 +1,11 @@
 /* ═══════════════════════════════════════════════════════════
-   EVENT GOCAP — SHARED GAME STATE
-   Single source of truth for both views
+   POKER MES — SHARED GAME STATE & SUPABASE SYNC
 ═══════════════════════════════════════════════════════════ */
 
 const GAME_STATE = {
+  title: 'POKER MES',
   hand: 24,
-  eventStartTime: Date.now() - (83 * 60 + 42) * 1000, // 1h23m42s ago
+  eventStartTime: Date.now() - (83 * 60 + 42) * 1000,
   blindLevel: 3,
   blindSchedule: [
     { level: 1, sb: 25,  bb: 50  },
@@ -17,80 +17,196 @@ const GAME_STATE = {
     { level: 7, sb: 300, bb: 600 },
     { level: 8, sb: 400, bb: 800 },
   ],
-  blindIntervalSecs: 20 * 60, // 20 min per level
-  lastBlindChangeTime: Date.now() - (13 * 60 + 42) * 1000, // 13m42s into level 3
+  blindIntervalSecs: 20 * 60,
+  lastBlindChangeTime: Date.now() - (13 * 60 + 42) * 1000,
   totalMedals: 25,
   centerMedals: 11,
   centerValue: 22000,
   totalPrize: 50000,
+  currentRound: 'PRE-FLOP',
+  isPaused: false,
 
-  players: [
-    { id: 1, name: 'ANDI',  chips: 2450, medals: 6,  lastTryUsed: false, status: 'ready' },
-    { id: 2, name: 'BUDI',  chips: 1100, medals: 3,  lastTryUsed: false, status: 'active' },
-    { id: 3, name: 'CACA',  chips: 650,  medals: 7,  lastTryUsed: false, status: 'active' },
-    { id: 4, name: 'DENI',  chips: 1800, medals: 2,  lastTryUsed: false, status: 'active' },
-    { id: 5, name: 'EKO',   chips: 400,  medals: 1,  lastTryUsed: true,  status: 'lasttry' },
-    { id: 6, name: 'FADLI', chips: 2100, medals: 4,  lastTryUsed: false, status: 'active' },
-    { id: 7, name: 'GITA',  chips: 0,    medals: 0,  lastTryUsed: true,  status: 'eliminated' },
-    { id: 8, name: 'HADI',  chips: 900,  medals: 2,  lastTryUsed: false, status: 'active' },
-  ],
-
-  recentHands: [
-    {
-      hand: 23,
-      winner: 'ANDI',
-      deltas: [
-        { name: 'ANDI',   medals: +3 },
-        { name: 'BUDI',   medals: -2 },
-        { name: 'DENI',   medals: -1 },
-        { name: 'CENTER', medals: -1 },
-      ]
-    },
-    {
-      hand: 22,
-      winner: 'FADLI',
-      deltas: [
-        { name: 'FADLI',  medals: +2 },
-        { name: 'CACA',   medals: -1 },
-        { name: 'CENTER', medals: -1 },
-      ]
-    },
-    {
-      hand: 21,
-      winner: 'BUDI',
-      deltas: [
-        { name: 'BUDI',   medals: +2 },
-        { name: 'CENTER', medals: -1 },
-        { name: 'HADI',   medals: -1 },
-      ]
-    },
-    {
-      hand: 20,
-      winner: 'EKO',
-      deltas: [
-        { name: 'EKO',    medals: 0, note: 'GITA ELIMINATED' },
-        { name: 'GITA',   medals: 0, note: 'ELIMINATED' },
-      ]
-    },
-  ]
+  players: [],
+  recentHands: []
 };
 
-// Persist to localStorage so operator panel changes reflect in public display
-function saveState() {
-  try { localStorage.setItem('gocap_state', JSON.stringify(GAME_STATE)); } catch(e) {}
+// Listeners for UI updates when state changes
+const stateListeners = new Set();
+function onGameStateChange(fn) {
+  stateListeners.add(fn);
+}
+function notifyStateChanged() {
+  stateListeners.forEach(fn => {
+    try { fn(GAME_STATE); } catch(e) { console.error(e); }
+  });
 }
 
-function loadState() {
+// ── Supabase Integration ───────────────────────────────────
+function getSupabase() {
+  if (!supabaseClient && window.supabase) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  return supabaseClient;
+}
+
+// Fetch live data from Supabase
+async function fetchSupabaseState() {
+  const sb = getSupabase();
+  if (!sb) {
+    loadLocalFallback();
+    return;
+  }
+
   try {
-    const s = localStorage.getItem('gocap_state');
+    // 1. Tournament metadata
+    const { data: tourney, error: tErr } = await sb
+      .from('tournaments')
+      .select('*')
+      .eq('id', 'current')
+      .single();
+
+    if (!tErr && tourney) {
+      GAME_STATE.title = tourney.title || 'POKER MES';
+      GAME_STATE.hand = tourney.hand || 24;
+      GAME_STATE.blindLevel = tourney.blind_level || 3;
+      GAME_STATE.totalMedals = tourney.total_medals || 25;
+      GAME_STATE.centerMedals = tourney.center_medals ?? 11;
+      GAME_STATE.centerValue = tourney.center_value || 22000;
+      GAME_STATE.totalPrize = tourney.total_prize || 50000;
+      GAME_STATE.currentRound = tourney.current_round || 'PRE-FLOP';
+      GAME_STATE.isPaused = !!tourney.is_paused;
+      if (tourney.event_start_time) {
+        GAME_STATE.eventStartTime = new Date(tourney.event_start_time).getTime();
+      }
+      if (tourney.last_blind_change_time) {
+        GAME_STATE.lastBlindChangeTime = new Date(tourney.last_blind_change_time).getTime();
+      }
+    }
+
+    // 2. Players list
+    const { data: playersData, error: pErr } = await sb
+      .from('players')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (!pErr && playersData && playersData.length > 0) {
+      GAME_STATE.players = playersData.map(p => ({
+        id: p.id,
+        name: p.name,
+        chips: p.chips,
+        medals: p.medals,
+        lastTryUsed: p.last_try_used,
+        status: p.status,
+        positionRole: p.position_role,
+        currentAction: p.current_action,
+        sortOrder: p.sort_order
+      }));
+    }
+
+    // 3. Hand history
+    const { data: handsData, error: hErr } = await sb
+      .from('hand_history')
+      .select('*')
+      .order('id', { ascending: false })
+      .limit(6);
+
+    if (!hErr && handsData && handsData.length > 0) {
+      GAME_STATE.recentHands = handsData.map(h => ({
+        hand: h.hand,
+        winner: h.winner,
+        deltas: typeof h.deltas === 'string' ? JSON.parse(h.deltas) : (h.deltas || [])
+      }));
+    }
+
+    saveLocalState();
+    notifyStateChanged();
+  } catch (err) {
+    console.error("Supabase fetch error, fallback to local:", err);
+    loadLocalFallback();
+  }
+}
+
+// Subscribe to real-time changes
+function subscribeToSupabase() {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  sb.channel('poker-mes-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () => {
+      fetchSupabaseState();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+      fetchSupabaseState();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'hand_history' }, () => {
+      fetchSupabaseState();
+    })
+    .subscribe();
+}
+
+// Save helpers for operator panel
+async function syncTournamentToSupabase() {
+  const sb = getSupabase();
+  if (!sb) return;
+  await sb.from('tournaments').upsert({
+    id: 'current',
+    title: GAME_STATE.title,
+    hand: GAME_STATE.hand,
+    blind_level: GAME_STATE.blindLevel,
+    total_medals: GAME_STATE.totalMedals,
+    center_medals: GAME_STATE.centerMedals,
+    center_value: GAME_STATE.centerValue,
+    total_prize: GAME_STATE.totalPrize,
+    current_round: GAME_STATE.currentRound,
+    is_paused: GAME_STATE.isPaused,
+    updated_at: new Date().toISOString()
+  });
+}
+
+async function syncPlayerToSupabase(player) {
+  const sb = getSupabase();
+  if (!sb) return;
+  await sb.from('players').upsert({
+    id: player.id,
+    name: player.name,
+    chips: player.chips,
+    medals: player.medals,
+    last_try_used: player.lastTryUsed,
+    status: player.status,
+    position_role: player.positionRole,
+    current_action: player.currentAction,
+    sort_order: player.sortOrder || player.id,
+    updated_at: new Date().toISOString()
+  });
+}
+
+async function syncHandHistoryToSupabase(handRecord) {
+  const sb = getSupabase();
+  if (!sb) return;
+  await sb.from('hand_history').insert({
+    hand: handRecord.hand,
+    winner: handRecord.winner,
+    total_pot: handRecord.totalPot || 0,
+    deltas: handRecord.deltas
+  });
+}
+
+// ── Local Fallback (Cache) ────────────────────────────────
+function saveLocalState() {
+  try { localStorage.setItem('poker_mes_state', JSON.stringify(GAME_STATE)); } catch(e) {}
+}
+
+function loadLocalFallback() {
+  try {
+    const s = localStorage.getItem('poker_mes_state');
     if (s) {
-      const parsed = JSON.parse(s);
-      Object.assign(GAME_STATE, parsed);
+      Object.assign(GAME_STATE, JSON.parse(s));
+      notifyStateChanged();
     }
   } catch(e) {}
 }
 
-// helpers
+// ── Helpers ───────────────────────────────────────────────
 function getCurrentBlind() {
   return GAME_STATE.blindSchedule[GAME_STATE.blindLevel - 1] || GAME_STATE.blindSchedule[0];
 }
@@ -108,15 +224,9 @@ function formatTime(totalSecs) {
   const h = Math.floor(totalSecs / 3600);
   const m = Math.floor((totalSecs % 3600) / 60);
   const s = Math.floor(totalSecs % 60);
-  if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-}
-
-function formatChips(n) {
-  if (n >= 1000) return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1).replace('.0','') + 'K';
-  return String(n);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
 function formatRupiah(n) {
-  return 'Rp' + n.toLocaleString('id-ID').replace(/\./g, '.');
+  return 'Rp' + (n || 0).toLocaleString('id-ID');
 }

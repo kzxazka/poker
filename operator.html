@@ -3,18 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EVENT GOCAP – Operator Panel</title>
+  <title>POKER MES – Operator Panel</title>
   <link rel="stylesheet" href="operator.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <!-- ══════════════ OPERATOR HEADER ══════════════ -->
   <header class="op-header">
     <div class="op-header-left">
-      <span class="op-brand">⚙ EVENT <span class="op-brand-accent">GOCAP</span></span>
+      <span class="op-brand">⚙ POKER <span class="op-brand-accent">MES</span></span>
       <span class="op-role-badge">OPERATOR PANEL</span>
     </div>
     <div class="op-header-center">
@@ -133,6 +134,7 @@
     </div>
   </div>
 
+  <script src="supabase-config.js"></script>
   <script src="game-state.js"></script>
   <script src="operator.js"></script>
 </body>
