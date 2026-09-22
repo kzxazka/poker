@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POKER MES – Live Tournament Scoreboard</title>
+  <link rel="stylesheet" href="public-display.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+</head>
+
+<body>
+  <div class="scoreboard" id="scoreboard">
+
+    <!-- ═══════════════════════ HEADER ═══════════════════════ -->
+    <header class="header">
+      <div class="header-left">
+        <span class="brand">POKER <span class="brand-accent">MES</span></span>
+        <span class="event-label">TEXAS HOLD'EM · PRIVATE TOURNAMENT</span>
+      </div>
+
+      <div class="header-right">
+        <div class="live-badge">
+          <span class="live-dot"></span>
+          LIVE
+        </div>
+        <div class="timer-block">
+          <div class="timer-value" id="event-timer">01:23:42</div>
+          <div class="timer-next" id="blind-timer">NEXT BLIND IN <span id="blind-countdown">06:18</span></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═══════════════════════ MEDAL BAR ═══════════════════════ -->
+    <div class="medal-bar">
+      <div class="medal-item">
+        <div class="medal-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" fill="#C9A227" opacity="0.15" />
+            <circle cx="12" cy="12" r="8" stroke="#C9A227" stroke-width="1.5" />
+            <circle cx="12" cy="12" r="4" fill="#C9A227" />
+          </svg>
+        </div>
+        <div class="medal-info">
+          <div class="medal-count-label">MEDALS IN CENTER</div>
+          <div class="medal-count-value" id="center-medals"><span class="medal-num">11</span> <span
+              class="medal-denom">/ 25</span></div>
+        </div>
+      </div>
+      <div class="medal-divider"></div>
+      <div class="medal-item">
+        <div class="medal-info">
+          <div class="medal-count-label">CENTER VALUE</div>
+          <div class="medal-prize" id="center-value">Rp22.000</div>
+        </div>
+      </div>
+      <div class="medal-divider"></div>
+      <div class="medal-item">
+        <div class="medal-info">
+          <div class="medal-count-label">TOTAL PRIZE POOL</div>
+          <div class="medal-prize medal-prize-total" id="total-prize">Rp50.000</div>
+        </div>
+      </div>
+      <div class="header-center">
+        <div class="blind-block">
+          <div class="blind-label-row">
+            <span class="blind-level">LEVEL 3</span>
+            <span class="blind-separator">·</span>
+            <span class="blind-next-label">NEXT: 100 / 200</span>
+          </div>
+          <div class="blind-values">
+            <span class="blind-main" id="blind-display">75 / 150</span>
+          </div>
+          <div class="blind-sub">SB &nbsp;/&nbsp; BB</div>
+        </div>
+      </div>
+      <div class="medal-bar-right">
+        <div class="hand-badge">HAND <span id="hand-num">#24</span></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
+    <div class="main-content">
+
+      <!-- PLAYER SCOREBOARD -->
+      <section class="scoreboard-section">
+        <div class="section-title">PLAYER STANDINGS</div>
+        <div class="player-list" id="player-list"></div>
+      </section>
+
+      <!-- SIDE PANEL -->
+      <aside class="side-panel">
+
+        <!-- LAST HAND RESULT -->
+        <div class="side-card last-hand-card">
+          <div class="side-card-title">LAST HAND · #23</div>
+          <div class="last-hand-winner">
+            <span class="winner-label">WINNER</span>
+            <span class="winner-name">ANDI</span>
+          </div>
+          <div class="last-hand-deltas">
+            <div class="delta delta-positive">
+              <span class="delta-player">ANDI</span>
+              <span class="delta-value">+3 🏅</span>
+            </div>
+            <div class="delta delta-negative">
+              <span class="delta-player">BUDI</span>
+              <span class="delta-value">−2 🏅</span>
+            </div>
+            <div class="delta delta-negative">
+              <span class="delta-player">DENI</span>
+              <span class="delta-value">−1 🏅</span>
+            </div>
+            <div class="delta delta-neutral">
+              <span class="delta-player">CENTER</span>
+              <span class="delta-value">−1 🏅</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- EVENT TICKER -->
+        <div class="side-card event-ticker-card">
+          <div class="side-card-title">RECENT EVENTS</div>
+          <div class="event-ticker" id="event-ticker">
+            <div class="ticker-item">
+              <div class="ticker-hand">HAND #23</div>
+              <div class="ticker-line ticker-win">ANDI WON POT</div>
+              <div class="ticker-line ticker-loss">BUDI −2 MEDALS</div>
+              <div class="ticker-line ticker-loss">DENI −1 MEDAL</div>
+            </div>
+            <div class="ticker-item">
+              <div class="ticker-hand">HAND #22</div>
+              <div class="ticker-line ticker-win">FADLI WON POT</div>
+              <div class="ticker-line ticker-loss">CACA −1 MEDAL</div>
+            </div>
+            <div class="ticker-item">
+              <div class="ticker-hand">HAND #21</div>
+              <div class="ticker-line ticker-win">BUDI WON POT</div>
+              <div class="ticker-line ticker-neutral">CENTER −1 MEDAL</div>
+            </div>
+            <div class="ticker-item">
+              <div class="ticker-hand">HAND #20</div>
+              <div class="ticker-line ticker-special">GITA ELIMINATED</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BLIND SCHEDULE -->
+        <div class="side-card blind-schedule-card">
+          <div class="side-card-title">BLIND SCHEDULE</div>
+          <div class="blind-schedule">
+            <div class="bs-row bs-past"><span class="bs-level">L1</span><span class="bs-val">25 / 50</span></div>
+            <div class="bs-row bs-past"><span class="bs-level">L2</span><span class="bs-val">50 / 100</span></div>
+            <div class="bs-row bs-current"><span class="bs-level">L3</span><span class="bs-val">75 / 150</span><span
+                class="bs-now">NOW</span></div>
+            <div class="bs-row bs-future"><span class="bs-level">L4</span><span class="bs-val">100 / 200</span></div>
+            <div class="bs-row bs-future"><span class="bs-level">L5</span><span class="bs-val">150 / 300</span></div>
+            <div class="bs-row bs-future"><span class="bs-level">L6</span><span class="bs-val">200 / 400</span></div>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+
+    <!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+    <footer class="footer">
+      <span class="footer-text">EVENT GOCAP · PRIVATE TOURNAMENT · <span id="footer-date"></span></span>
+      <a href="operator.html" class="op-link" target="_blank">⚙ OPERATOR PANEL</a>
+    </footer>
+
+  </div>
+
+  <script src="game-state.js"></script>
+  <script src="public-display.js"></script>
+</body>
+
+</html>

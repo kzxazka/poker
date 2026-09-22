@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EVENT GOCAP – Operator Panel</title>
+  <link rel="stylesheet" href="operator.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ══════════════ OPERATOR HEADER ══════════════ -->
+  <header class="op-header">
+    <div class="op-header-left">
+      <span class="op-brand">⚙ EVENT <span class="op-brand-accent">GOCAP</span></span>
+      <span class="op-role-badge">OPERATOR PANEL</span>
+    </div>
+    <div class="op-header-center">
+      <div class="op-info-chip">
+        <span class="op-info-label">HAND</span>
+        <span class="op-info-value" id="op-hand">#24</span>
+      </div>
+      <div class="op-info-chip">
+        <span class="op-info-label">BLIND</span>
+        <span class="op-info-value" id="op-blind">75 / 150</span>
+      </div>
+      <div class="op-info-chip">
+        <span class="op-info-label">CENTER</span>
+        <span class="op-info-value gold" id="op-center">11 🏅</span>
+      </div>
+      <div class="op-info-chip">
+        <span class="op-info-label">TIMER</span>
+        <span class="op-info-value mono" id="op-timer">01:23:42</span>
+      </div>
+    </div>
+    <div class="op-header-right">
+      <button class="op-btn op-btn-secondary" id="btn-pause" onclick="togglePause()">⏸ PAUSE</button>
+      <button class="op-btn op-btn-gold" id="btn-newhand" onclick="openNewHand()">+ NEW HAND</button>
+    </div>
+  </header>
+
+  <!-- ══════════════ MAIN LAYOUT ══════════════ -->
+  <div class="op-layout">
+
+    <!-- LEFT: PLAYER CARDS -->
+    <div class="op-players-panel">
+      <div class="op-panel-title">PLAYER STATUS</div>
+      <div class="op-player-grid" id="op-player-grid">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+
+    <!-- RIGHT: ACTION LOG -->
+    <div class="op-log-panel">
+      <div class="op-panel-title">HAND HISTORY</div>
+      <div class="op-log" id="op-log">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ NEW HAND MODAL ══════════════ -->
+  <div class="modal-overlay" id="modal-newhand" style="display:none">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <div class="modal-title">NEW HAND <span id="modal-hand-num">#24</span></div>
+        <button class="modal-close" onclick="closeModal('modal-newhand')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="nh-players" id="nh-player-inputs">
+          <!-- Injected by JS -->
+        </div>
+        <div class="nh-winner-section">
+          <label class="form-label">WINNER</label>
+          <select class="form-select" id="nh-winner">
+            <option value="">Select winner…</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="op-btn op-btn-secondary" onclick="closeModal('modal-newhand')">CANCEL</button>
+        <button class="op-btn op-btn-gold" onclick="previewHand()">PREVIEW RESULT →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ CONFIRM RESULT MODAL ══════════════ -->
+  <div class="modal-overlay" id="modal-confirm" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">CONFIRM HAND <span id="confirm-hand-num">#24</span></div>
+        <button class="modal-close" onclick="closeModal('modal-confirm')">✕</button>
+      </div>
+      <div class="modal-body" id="confirm-body">
+        <!-- Injected by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="op-btn op-btn-secondary" onclick="closeModal('modal-confirm')">← BACK</button>
+        <button class="op-btn op-btn-danger" onclick="confirmHand()">CONFIRM RESULT ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ CONVERT MEDAL MODAL ══════════════ -->
+  <div class="modal-overlay" id="modal-convert" style="display:none">
+    <div class="modal modal-compact">
+      <div class="modal-header">
+        <div class="modal-title">CONVERT MEDAL → CHIPS</div>
+        <button class="modal-close" onclick="closeModal('modal-convert')">✕</button>
+      </div>
+      <div class="modal-body" id="convert-body">
+        <!-- Injected by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="op-btn op-btn-secondary" onclick="closeModal('modal-convert')">CANCEL</button>
+        <button class="op-btn op-btn-gold" onclick="confirmConvert()">CONFIRM CONVERT ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ BUST ALERT MODAL ══════════════ -->
+  <div class="modal-overlay" id="modal-bust" style="display:none">
+    <div class="modal modal-compact">
+      <div class="modal-body" id="bust-body">
+        <!-- Injected by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="op-btn op-btn-gold full-width" onclick="closeModal('modal-bust')">CONTINUE →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game-state.js"></script>
+  <script src="operator.js"></script>
+</body>
+</html>
