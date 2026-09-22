@@ -12,7 +12,9 @@
   <!-- Google Fonts for authentic tournament scoreboard typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@500;600;700;800&display=swap"
+    rel="stylesheet" />
 
   <script>
     tailwind.config = {
@@ -52,20 +54,120 @@
     }
 
     /* Scrollbars */
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-thumb { background: #182234; border-radius: 2px; }
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
 
-    .tabular-numbers { font-variant-numeric: tabular-nums; }
-    .gold-glow { text-shadow: 0 0 12px rgba(245, 158, 11, 0.45); }
-    .green-glow { box-shadow: 0 0 10px rgba(16, 185, 129, 0.25); }
-    
-    .active-row-indicator { box-shadow: inset 3px 0 0 0 #10b981; }
-    .warning-row-indicator { box-shadow: inset 3px 0 0 0 #f59e0b; }
-    .eliminated-row-indicator { box-shadow: inset 3px 0 0 0 #7f1d1d; }
+    ::-webkit-scrollbar-thumb {
+      background: #182234;
+      border-radius: 2px;
+    }
+
+    .tabular-numbers {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .gold-glow {
+      text-shadow: 0 0 12px rgba(245, 158, 11, 0.45);
+    }
+
+    .green-glow {
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+    }
+
+    /* ════════ PLAYER TURN BORDER STATES (GOLD STATIC GLOW) ════════ */
+    /* 1. Player with active turn: Solid Static Glowing Yellow (No Breathing) */
+
+    .turn-active-static,
+    .turn-active-breathing {
+      border: 2px solid #f59e0b !important;
+      box-shadow: 0 0 22px rgba(245, 158, 11, 0.65), inset 0 0 10px rgba(245, 158, 11, 0.15) !important;
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(15, 22, 36, 0.98)) !important;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* 2. Players waiting for their turn: Dim glowing blue border */
+    .turn-waiting-blue {
+      border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.2), inset 0 0 6px rgba(56, 189, 248, 0.05) !important;
+      background: linear-gradient(90deg, rgba(8, 28, 52, 0.55), #0c121d) !important;
+    }
+
+    /* 3. Players who have already acted this round: Solid green border */
+    .turn-acted-green {
+      border: 1.5px solid #16a34a !important;
+      box-shadow: 0 0 8px rgba(22, 163, 74, 0.25) !important;
+      background: linear-gradient(90deg, rgba(5, 32, 16, 0.5), #0b111a) !important;
+    }
+
+    /* 4. Folded players: Dim grey border, faded */
+    .turn-folded-grey {
+      border: 1px solid rgba(100, 116, 139, 0.25) !important;
+      box-shadow: none !important;
+      opacity: 0.42 !important;
+      background: #080b10 !important;
+      filter: grayscale(40%);
+    }
+
+    /* ════════ LARGE MOVE BADGES FOR PUBLIC DISPLAY ════════ */
+    .badge-move-lg {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 16px;
+      border-radius: 9999px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+      transition: all 0.2s ease;
+    }
+
+    .badge-move-raise {
+      background: linear-gradient(135deg, #b45309, #f59e0b);
+      color: #000;
+      border: 1.5px solid #fbbf24;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+    }
+
+    .badge-move-call {
+      background: linear-gradient(135deg, #047857, #10b981);
+      color: #000;
+      border: 1.5px solid #34d399;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+    }
+
+    .badge-move-check {
+      background: linear-gradient(135deg, #0369a1, #38bdf8);
+      color: #000;
+      border: 1.5px solid #7dd3fc;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+    }
+
+    .badge-move-fold {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1.5px solid #475569;
+    }
+
+    .badge-move-allin {
+      background: linear-gradient(135deg, #6b21a8, #a855f7);
+      color: #fff;
+      border: 1.5px solid #d8b4fe;
+      box-shadow: 0 0 24px rgba(168, 85, 247, 0.75);
+      animation: pulse 1.5s infinite;
+    }
 
     /* Responsive adjustments */
     @media (max-width: 1280px) {
-      .header-metrics-group { flex-wrap: wrap; gap: 1rem; }
+      .header-metrics-group {
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
     }
   </style>
 
@@ -73,25 +175,29 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-amber-500 selection:text-black relative">
+<body
+  class="min-h-screen flex flex-col justify-between antialiased selection:bg-amber-500 selection:text-black relative">
 
   <!-- ═══════════════════════ BLINDS UP NOTIFICATION BANNER ═══════════════════════ -->
-  <div id="blinds-up-banner" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#171206]/95 backdrop-blur border-2 border-[#f59e0b] shadow-[0_0_35px_rgba(245,158,11,0.5)] text-white px-8 py-4 rounded-xl flex items-center gap-4 transition-all duration-500 transform -translate-y-32 opacity-0 pointer-events-none">
+  <div id="blinds-up-banner"
+    class="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#171206]/95 backdrop-blur border-2 border-[#f59e0b] shadow-[0_0_35px_rgba(245,158,11,0.5)] text-white px-8 py-4 rounded-xl flex items-center gap-4 transition-all duration-500 transform -translate-y-32 opacity-0 pointer-events-none">
     <span class="text-4xl animate-bounce">🔔</span>
     <div>
       <div class="text-xs font-mono font-bold text-[#fbbf24] tracking-widest uppercase">BLINDS UP!</div>
-      <div class="text-2xl font-display font-black tracking-wider text-white" id="blinds-up-text">LEVEL 2 — 50 / 100</div>
+      <div class="text-2xl font-display font-black tracking-wider text-white" id="blinds-up-text">LEVEL 2 — 50 / 100
+      </div>
     </div>
   </div>
 
   <!-- ═══════════════════════ MAIN HEADER ═══════════════════════ -->
-  <header class="w-full bg-[#080d15] border-b border-[#162030] px-4 md:px-6 py-3.5 shrink-0" data-purpose="tournament-top-bar">
-    <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-4">
-      
-      <!-- Brand & Tournament Title -->
-      <div class="flex items-center gap-6" data-purpose="branding">
+  <header class="w-full bg-[#080d15] border-b border-[#162030] px-4 md:px-6 py-3 shrink-0"
+    data-purpose="tournament-top-bar">
+    <div class="max-w-[1920px] mx-auto flex items-center justify-between gap-4">
+
+      <!-- LEFT: Brand & Tournament Title -->
+      <div class="flex items-center gap-6 min-w-[220px]" data-purpose="branding">
         <div>
-          <h1 class="font-display font-bold text-2xl md:text-3xl tracking-wider text-white leading-none">
+          <h1 class="font-display font-black text-2xl md:text-3xl tracking-wider text-white leading-none">
             POKER <span class="text-brand-gold-bright">MES</span>
           </h1>
           <p class="text-[10px] md:text-[11px] font-mono tracking-widest text-[#5e708a] mt-1 uppercase font-semibold">
@@ -100,85 +206,49 @@
         </div>
       </div>
 
-      <!-- Live Clock & Status Badge -->
-      <div class="flex items-center gap-3 md:gap-4 bg-[#0c121d] border border-[#172233] px-3 md:px-4 py-2 rounded" data-purpose="tournament-clock">
-        <div class="flex items-center gap-2 bg-[#092218] border border-[#12593b] px-2 py-0.5 rounded text-[11px] font-bold text-[#10b981] uppercase tracking-wider">
-          <span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
-          LIVE
-        </div>
-        <div class="text-right">
-          <div class="text-xl md:text-2xl font-bold font-mono tracking-wider text-white leading-none tabular-numbers" id="event-timer">
-            01:34:07
+      <!-- CENTER: Live Clock & Next Blind Countdown Timer (CENTERED) -->
+      <div
+        class="flex items-center justify-center gap-4 bg-[#0c121d] border border-[#1a293f] px-5 py-2 rounded-lg shadow-inner mx-auto"
+        data-purpose="tournament-clock">
+        <div class="text-center">
+          <div class="text-2xl md:text-3xl font-black font-mono tracking-wider text-white leading-none tabular-numbers"
+            id="event-timer">
+            02:00:00
           </div>
-          <div class="text-[9px] md:text-[10px] font-mono tracking-widest text-[#ef4444] font-semibold mt-0.5" id="blind-timer">
-            NEXT BLIND IN <span id="blind-countdown">06:18</span>
+          <div class="text-[10px] md:text-[11px] font-mono tracking-widest text-[#ef4444] font-bold mt-1"
+            id="blind-timer">
+            NEXT BLIND IN <span id="blind-countdown"
+              class="font-black text-white bg-red-950/80 px-2 py-0.5 rounded border border-red-800">15:00</span>
           </div>
         </div>
       </div>
 
-      <!-- Center Financials and Pool Metrics -->
-      <div class="flex items-center gap-4 md:gap-8 flex-wrap header-metrics-group" data-purpose="table-metrics">
+      <!-- FAR RIGHT: Medals In Center & Center Value (TOTAL PRIZE REMOVED) -->
+      <div class="flex items-center gap-4 md:gap-7 justify-end header-metrics-group min-w-[260px]"
+        data-purpose="table-metrics">
         <!-- Medals In Center -->
-        <div class="flex items-center gap-3">
-          <div class="relative w-8 h-8 rounded-full border-2 border-brand-gold flex items-center justify-center text-brand-gold">
+        <div class="flex items-center gap-2.5">
+          <div
+            class="relative w-8 h-8 rounded-full border-2 border-brand-gold flex items-center justify-center text-brand-gold">
             <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="6"></circle>
             </svg>
           </div>
           <div>
-            <div class="text-[10px] md:text-[11px] font-bold tracking-widest text-[#5e708a] uppercase">Medals in Center</div>
+            <div class="text-[10px] font-bold tracking-widest text-[#5e708a] uppercase">Medals in Center</div>
             <div class="text-xl md:text-2xl font-display font-bold tracking-wider text-white" id="center-medals">
               <span class="text-brand-gold-bright">11</span> <span class="text-[#3c4b62] font-normal">/</span> 25
             </div>
           </div>
         </div>
 
-        <!-- Divider -->
         <div class="hidden sm:block h-8 w-px bg-[#162030]"></div>
 
         <!-- Center Value -->
         <div>
-          <div class="text-[10px] md:text-[11px] font-bold tracking-widest text-[#5e708a] uppercase">Center Value</div>
-          <div class="text-xl md:text-2xl font-bold font-mono text-white tracking-tight" id="center-value">
+          <div class="text-[10px] font-bold tracking-widest text-[#5e708a] uppercase">Center Value</div>
+          <div class="text-xl md:text-2xl font-bold font-mono text-brand-gold-bright tracking-tight" id="center-value">
             Rp22.000
-          </div>
-        </div>
-
-        <!-- Divider -->
-        <div class="hidden sm:block h-8 w-px bg-[#162030]"></div>
-
-        <!-- Total Prize Pool -->
-        <div>
-          <div class="text-[10px] md:text-[11px] font-bold tracking-widest text-[#5e708a] uppercase">Total Prize Pool</div>
-          <div class="text-xl md:text-2xl font-bold font-mono text-brand-gold-bright gold-glow tracking-tight" id="total-prize">
-            Rp50.000
-          </div>
-        </div>
-      </div>
-
-      <!-- Blind Level & Hand Counter Badges -->
-      <div class="flex items-center gap-3 md:gap-4" data-purpose="level-and-hand-badge">
-        <!-- Blind Box -->
-        <div class="bg-[#0e1624] border border-[#1a293f] rounded px-3 md:px-4 py-1.5 text-center min-w-[120px]">
-          <div class="text-[9px] md:text-[10px] font-mono font-semibold tracking-wider text-[#6d82a2] uppercase" id="blind-level-info">
-            Level 3 <span class="text-[#3f4f66]">•</span> Next: 100 / 200
-          </div>
-          <div class="text-xl md:text-2xl font-display font-bold text-brand-gold-bright leading-tight tracking-wider" id="blind-display">
-            75 <span class="text-[#4e5d75] font-light">/</span> 150
-          </div>
-          <div class="text-[8px] md:text-[9px] font-mono tracking-widest text-[#52637a] uppercase font-semibold">
-            SB / BB
-          </div>
-        </div>
-
-        <!-- Hand Indicator -->
-        <div class="bg-[#0b121e] border border-[#1d2a40] px-3 md:px-4 py-2.5 rounded text-center">
-          <div class="flex items-center gap-1.5 justify-center mb-0.5">
-            <span class="text-[9px] font-mono font-bold bg-[#1e2e45] text-cyan-400 px-1.5 py-0.5 rounded uppercase tracking-wider" id="round-indicator">PRE-FLOP</span>
-            <span class="text-[11px] font-mono font-bold text-[#f59e0b]" id="dealer-indicator">D: ANDI</span>
-          </div>
-          <div class="text-base md:text-lg font-display font-bold tracking-widest text-slate-200 uppercase whitespace-nowrap">
-            HAND <span class="text-white" id="hand-num">#24</span>
           </div>
         </div>
       </div>
@@ -187,13 +257,70 @@
   </header>
 
   <!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
-  <main class="w-full max-w-[1920px] mx-auto px-4 md:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 items-start" data-purpose="tournament-body">
+  <main
+    class="w-full max-w-[1920px] mx-auto px-4 md:px-6 py-3.5 grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 items-start"
+    data-purpose="tournament-body">
 
-    <!-- LEFT COLUMN: Player Standings Board (9 of 12 cols on desktop) -->
+    <!-- LEFT COLUMN: Player Standings Board & Centered Game Status (9 of 12 cols) -->
     <section class="lg:col-span-9 flex flex-col gap-2.5" data-purpose="player-standings-section">
-      <div class="flex items-center justify-between px-1 mb-1">
-        <span class="text-[11px] font-mono uppercase tracking-widest text-[#5b6f8a] font-bold">Player Standings</span>
-        <span class="text-[11px] font-mono text-[#5b6f8a] flex items-center gap-1">
+
+      <!-- CENTERED LIVE GAME STATUS BAR (HAND, LEVEL/BLINDS, NEXT BLINDS, ROUND STATUS) -->
+      <div
+        class="w-full bg-[#0a101a] border border-[#182840] rounded-lg px-6 py-2.5 flex flex-wrap items-center justify-center gap-5 md:gap-7 shadow-lg text-center"
+        data-purpose="centered-game-bar">
+        <!-- Hand -->
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-mono text-[#5b6f8a] uppercase tracking-wider font-bold">HAND</span>
+          <span class="text-2xl font-display font-black text-white tracking-widest" id="hand-num">#1</span>
+        </div>
+
+        <span class="hidden sm:inline text-[#23354f] font-bold text-lg">|</span>
+
+        <!-- Level & Blinds with Next Blind on the Right -->
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono font-bold text-[#6d82a2] uppercase" id="blind-level-info">Level 1</span>
+            <span
+              class="text-2xl md:text-3xl font-display font-black text-brand-gold-bright tracking-wider leading-none"
+              id="blind-display">25 <span class="text-[#4e5d75] font-light">/</span> 50</span>
+          </div>
+
+          <span class="text-[#334661] font-bold text-sm">→</span>
+
+          <!-- Next Blind displayed directly to the right of current blinds -->
+          <div class="flex items-center gap-1.5 bg-[#0a121e] border border-[#1b2b40] px-2.5 py-1 rounded">
+            <span class="text-[9px] font-mono text-[#5b7294] font-bold uppercase">NEXT:</span>
+            <span class="text-sm md:text-base font-display font-black text-[#93c5fd] tracking-wide"
+              id="next-blind-display">50 / 100</span>
+          </div>
+        </div>
+
+        <span class="hidden sm:inline text-[#23354f] font-bold text-lg">|</span>
+
+        <!-- Round Status Indicator -->
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-mono text-[#5b6f8a] uppercase tracking-wider font-bold">ROUND</span>
+          <span
+            class="text-sm md:text-base font-mono font-black bg-[#082f49] text-[#38bdf8] border border-[#0284c7] px-3.5 py-1 rounded uppercase tracking-widest shadow-[0_0_15px_rgba(56,189,248,0.4)]"
+            id="round-indicator">PRE-FLOP</span>
+        </div>
+
+        <span class="hidden sm:inline text-[#23354f] font-bold text-lg">|</span>
+
+        <!-- Current Pot & Bet -->
+        <div class="flex items-center gap-3 font-mono text-xs md:text-sm">
+          <span class="text-slate-400 font-semibold">POT: <strong class="text-amber-400 font-black text-lg"
+              id="main-pot">0</strong></span>
+          <span class="text-slate-600">•</span>
+          <span class="text-slate-400 font-semibold">BET: <strong class="text-white font-black text-lg"
+              id="main-bet">0</strong></span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between px-1 mt-1 mb-0.5">
+        <span class="text-[11px] font-mono uppercase tracking-widest text-[#5b6f8a] font-bold">Player Standings (Table
+          Order)</span>
+        <span class="text-[11px] font-mono text-[#5b6f8a] flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping"></span> Live Cloud Sync
         </span>
       </div>
@@ -204,12 +331,13 @@
       </div>
     </section>
 
-    <!-- RIGHT COLUMN: Sidebar (Hand Details, Event Logs, Blinds) (3 of 12 cols) -->
+    <!-- RIGHT COLUMN: Sidebar (Table Positions, Events, Blinds) (3 of 12 cols) -->
     <aside class="lg:col-span-3 flex flex-col gap-3.5" data-purpose="sidebar-panels">
 
       <!-- Table Positions & Action Widget -->
       <div class="bg-[#090f18] border border-[#141e2e] rounded p-3 text-xs font-mono">
-        <div class="flex items-center justify-between text-[10px] tracking-wider text-[#576b85] uppercase mb-2 font-bold">
+        <div
+          class="flex items-center justify-between text-[10px] tracking-wider text-[#576b85] uppercase mb-2 font-bold">
           <span>Table Positions & Action</span>
           <span class="text-[#10b981] animate-pulse" id="side-round-status">ROUND: PRE-FLOP</span>
         </div>
@@ -229,55 +357,35 @@
         </div>
       </div>
 
-      <!-- Widget 1: Last Hand Summary -->
-      <div class="bg-[#090f18] border border-[#141e2e] rounded p-4" data-purpose="last-hand-card">
-        <div class="flex items-center justify-between text-[11px] font-mono tracking-wider text-[#576b85] uppercase mb-2">
-          <span id="last-hand-title">Last Hand · #23</span>
-        </div>
-        <div class="flex items-baseline gap-2 mb-3">
-          <span class="text-xs font-bold uppercase tracking-widest text-[#6c829f]">Winner</span>
-          <span class="text-2xl font-display font-bold text-brand-gold-bright tracking-wider" id="last-hand-winner">ANDI</span>
-        </div>
-        <div class="space-y-1 text-xs font-mono" id="last-hand-deltas">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-
-      <!-- Widget 2: Recent Events Log (Collapsible / Dropdown Filter / Hide All) -->
-      <div class="bg-[#090f18] border border-[#141e2e] rounded p-3 md:p-4 flex-1 transition-all" data-purpose="recent-events-card">
-        <div class="flex items-center justify-between mb-2">
+      <!-- Widget: Recent Events Log (Collapsible Toggle) -->
+      <div class="bg-[#090f18] border border-[#141e2e] rounded p-3.5 flex-1 transition-all"
+        data-purpose="recent-events-card">
+        <div class="flex items-center justify-between mb-1">
           <button id="recent-events-toggle" onclick="toggleRecentEvents()"
-            class="flex items-center gap-2 text-left group focus:outline-none cursor-pointer py-1"
+            class="flex items-center justify-between w-full group focus:outline-none cursor-pointer py-1 text-left"
             title="Klik untuk buka / sembunyikan semua Recent Events">
-            <span class="text-[11px] font-mono tracking-wider text-[#576b85] group-hover:text-slate-200 uppercase font-bold transition flex items-center gap-1.5">
-              <i id="recent-events-chevron" class="fa-solid fa-chevron-down text-[10px] text-brand-gold transition-transform duration-200"></i>
+            <span
+              class="text-[12px] font-mono tracking-wider text-slate-300 group-hover:text-brand-gold uppercase font-bold transition flex items-center gap-2">
+              <i id="recent-events-chevron"
+                class="fa-solid fa-chevron-down text-[11px] text-brand-gold transition-transform duration-200"></i>
               Recent Events
             </span>
-            <span id="recent-events-count" class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#162235] text-[#738ba8] border border-[#22354f]">
-              0
+            <span id="recent-events-count"
+              class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#162235] text-[#738ba8] border border-[#22354f]">
+              4 Hands
             </span>
           </button>
-          
-          <!-- Dropdown Filter & Visibility Selector -->
-          <div class="flex items-center gap-1.5">
-            <select id="recent-events-filter" onchange="onSelectEventHand(this.value)"
-              class="bg-[#0e1625] border border-[#1e2f47] text-[#93a7c3] text-[10px] font-mono rounded px-2 py-0.5 focus:border-brand-gold focus:outline-none cursor-pointer"
-              title="Pilih filter hand atau sembunyikan tampilan events">
-              <option value="all">Semua Hand (Recent)</option>
-              <option value="hide">✕ Sembunyikan (Hide Events)</option>
-            </select>
-          </div>
         </div>
 
         <!-- Collapsible Content Body -->
         <div id="recent-events-collapsible" class="transition-all duration-300">
-          <div class="space-y-2.5 text-[11px] font-mono mt-2" id="recent-events-log">
-            <!-- Populated by JS -->
+          <div class="space-y-2 text-[11px] font-mono mt-2" id="recent-events-log">
+            <!-- Populated by JS: Top hand is most recent, followed by 3 previous -->
           </div>
         </div>
       </div>
 
-      <!-- Widget 3: Blind Schedule -->
+      <!-- Widget: Blind Schedule -->
       <div class="bg-[#090f18] border border-[#141e2e] rounded p-4" data-purpose="blind-schedule-card">
         <div class="text-[11px] font-mono tracking-wider text-[#576b85] uppercase mb-2 font-bold">
           Blind Schedule
@@ -291,7 +399,8 @@
   </main>
 
   <!-- ═══════════════════════ MAIN FOOTER ═══════════════════════ -->
-  <footer class="w-full bg-[#05080c] border-t border-[#131b27] px-4 md:px-6 py-2.5 shrink-0 text-xs font-mono" data-purpose="tournament-footer">
+  <footer class="w-full bg-[#05080c] border-t border-[#131b27] px-4 md:px-6 py-2.5 shrink-0 text-xs font-mono"
+    data-purpose="tournament-footer">
     <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-2 text-[#47576f]">
       <!-- Left Tournament Meta -->
       <div class="tracking-widest uppercase text-[10px] md:text-xs" id="footer-meta">
@@ -299,10 +408,12 @@
       </div>
       <!-- Right Operator & Launcher Links -->
       <div class="flex items-center gap-2">
-        <a class="inline-flex items-center gap-1.5 px-3 py-1 rounded border border-[#1a2537] hover:border-[#2f405c] text-[#7186a5] hover:text-white transition-all bg-[#080d14]" href="launcher.html">
+        <a class="inline-flex items-center gap-1.5 px-3 py-1 rounded border border-[#1a2537] hover:border-[#2f405c] text-[#7186a5] hover:text-white transition-all bg-[#080d14]"
+          href="launcher.html">
           <span>🏠</span> LAUNCHER HUB
         </a>
-        <a class="inline-flex items-center gap-1.5 px-3 py-1 rounded border border-[#1a2537] hover:border-[#2f405c] text-[#7186a5] hover:text-white transition-all bg-[#080d14]" href="operator.html" target="_blank">
+        <a class="inline-flex items-center gap-1.5 px-3 py-1 rounded border border-[#1a2537] hover:border-[#2f405c] text-[#7186a5] hover:text-white transition-all bg-[#080d14]"
+          href="operator.html" target="_blank">
           <span>⚙</span> OPERATOR PANEL
         </a>
       </div>

@@ -1137,65 +1137,144 @@
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i> Menyimpan ke Cloud Supabase...`;
 
       try {
-        const startLevel = parseInt(document.getElementById('selectStartingLevel').value) || 1;
+        const startSB = parseInt(document.getElementById('inputSB').value) || 25;
+        const startBB = parseInt(document.getElementById('inputBB').value) || 50;
         const durationMin = parseInt(document.getElementById('selectBlindTimer').value) || 15;
         const ctdHour = parseInt(document.getElementById('inputCountdownHour').value) || 0;
         const ctdMin = parseInt(document.getElementById('inputCountdownMin').value) || 0;
         const totalMedalsVal = parseInt(document.getElementById('inputCenterMedals').value) || 25;
         const rupiahPerMedal = parseInt(document.getElementById('inputRupiahPerMedal').value) || 2000;
 
+        // Generate 12-level blind schedule starting at Level 1 with configured SB/BB
+        const mults = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16];
+        const generatedBlinds = mults.map((m, idx) => ({
+          level: idx + 1,
+          sb: startSB * m,
+          bb: startBB * m,
+          ante: 0
+        }));
+
         const sb = getSupabase();
 
-        // 1. Update tournaments table
-        const countdownDurationSecs = (ctdHour * 3600) + (ctdMin * 60) || 7200;
-        const eventStartEpoch = Date.now() - ((7200 - countdownDurationSecs) * 1000);
-        const eventStartTime = new Date(eventStartEpoch).toISOString();
+        // 1. Update blind_schedules in Supabase
+        if (sb) {
+          for (const b of generatedBlinds) {
+            await sb.from('blind_schedules').upsert({
+              level: b.level,
+              sb: b.sb,
+              bb: b.bb,
+              ante: b.ante
+            });
+          }
+        }
+
+        // 2. Prepare timing and initial pre-flop state
+        const countdownTotalSecs = (ctdHour * 3600) + (ctdMin * 60) || 7200;
+        const eventStartTime = new Date().toISOString();
         const lastBlindChangeTime = new Date().toISOString();
+
+        // Initial UTG player is after Big Blind (Seat 4 / index 3)
+        const utgPlayer = players.length > 3 ? players[3] : players[0];
 
         if (sb) {
           await sb.from('tournaments').upsert({
             id: 'current',
             title: 'POKER MES',
             hand: 1,
-            blind_level: startLevel,
+            blind_level: 1,
             blind_interval_secs: durationMin * 60,
             event_start_time: eventStartTime,
             last_blind_change_time: lastBlindChangeTime,
             total_medals: totalMedalsVal,
-            center_medals: 11,
-            center_value: 11 * rupiahPerMedal,
+            center_medals: totalMedalsVal,
+            center_value: totalMedalsVal * rupiahPerMedal,
             total_prize: totalMedalsVal * rupiahPerMedal,
-            current_round: 'PRE-FLOP',
+            current_round: JSON.stringify({
+              round: 'PRE-FLOP',
+              turnId: utgPlayer ? utgPlayer.id : 1,
+              pot: startSB + startBB,
+              currentBet: startBB,
+              foldedPlayerIds: [],
+              actedInRound: [],
+              contributions: {
+                [players[1]?.id || 2]: startSB,
+                [players[2]?.id || 3]: startBB
+              },
+              roundBets: {
+                [players[1]?.id || 2]: startSB,
+                [players[2]?.id || 3]: startBB
+              },
+              lastRaiserId: null,
+              forfeitedInHand: {},
+              forfeitedMedalsInPot: 0
+            }),
             is_paused: false,
             updated_at: new Date().toISOString()
           });
 
-          // 2. Clear & Upsert players to Supabase
+          // 3. Clear old hand history to eliminate dummy / old records
+          try {
+            await sb.from('hand_history').delete().neq('id', 0);
+          } catch (e) {
+            console.warn("Could not clear hand_history:", e);
+          }
+
+          // 4. Clear & Upsert players to Supabase
           await sb.from('players').delete().neq('id', 0);
           for (let i = 0; i < players.length; i++) {
             const p = players[i];
+            let initialChips = p.chips;
+            let initialAction = null;
+            if (p.position === 'D') {
+              initialAction = 'DEALER';
+            } else if (p.position === 'SB') {
+              initialChips = Math.max(0, initialChips - startSB);
+              initialAction = `SB ${startSB}`;
+            } else if (p.position === 'BB') {
+              initialChips = Math.max(0, initialChips - startBB);
+              initialAction = `BB ${startBB}`;
+            }
+
             await sb.from('players').upsert({
               id: p.id || (i + 1),
               name: p.name,
-              chips: p.chips,
+              chips: initialChips,
               medals: p.medals,
               last_try_used: !!p.lastTryUsed,
               status: p.status || 'active',
               position_role: p.position || null,
-              current_action: p.position === 'D' ? 'DEALER' : (p.position === 'SB' ? 'SMALL BLIND' : (p.position === 'BB' ? 'BIG BLIND' : null)),
+              current_action: initialAction,
               sort_order: i + 1,
               updated_at: new Date().toISOString()
             });
           }
         }
 
-        // Cache local state
+        // Cache local state — also clear any stale localStorage
+        localStorage.removeItem('poker_mes_state');
         GAME_STATE.hand = 1;
-        GAME_STATE.blindLevel = startLevel;
+        GAME_STATE.recentHands = [];
+        GAME_STATE.blindSchedule = generatedBlinds;
+        GAME_STATE.blindLevel = 1;
         GAME_STATE.blindIntervalSecs = durationMin * 60;
-        GAME_STATE.eventStartTime = eventStartEpoch;
+        GAME_STATE.eventStartTime = Date.now();
+        GAME_STATE.countdownTotalSecs = countdownTotalSecs;
         GAME_STATE.lastBlindChangeTime = Date.now();
         GAME_STATE.totalMedals = totalMedalsVal;
+        GAME_STATE.centerMedals = totalMedalsVal;
+        GAME_STATE.centerValue = totalMedalsVal * rupiahPerMedal;
+        GAME_STATE.totalPrize = totalMedalsVal * rupiahPerMedal;
+        GAME_STATE.currentRound = 'PRE-FLOP';
+        GAME_STATE.activeTurnPlayerId = utgPlayer ? utgPlayer.id : 1;
+        GAME_STATE.pot = startSB + startBB;
+        GAME_STATE.currentBet = startBB;
+        GAME_STATE.foldedPlayerIds = [];
+        GAME_STATE.actedInRound = [];
+        GAME_STATE.currentHandContributions = {};
+        GAME_STATE.roundBets = {};
+        GAME_STATE.lastRaiserId = null;
+        GAME_STATE.stateVersion = 1;
+        GAME_STATE.lastUpdated = Date.now();
         saveLocalState();
 
         // Show Sleek Custom Tournament Modal

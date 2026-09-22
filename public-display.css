@@ -202,42 +202,6 @@ body {
   gap: 16px;
 }
 
-.live-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: var(--green);
-  padding: 4px 10px;
-  border: 1px solid rgba(46, 198, 107, 0.3);
-  border-radius: 4px;
-  background: var(--green-bg);
-}
-
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: pulse-green 2s infinite;
-}
-
-@keyframes pulse-green {
-
-  0%,
-  100% {
-    opacity: 1;
-    box-shadow: 0 0 0 0 rgba(46, 198, 107, 0.5);
-  }
-
-  50% {
-    opacity: 0.6;
-    box-shadow: 0 0 0 4px rgba(46, 198, 107, 0);
-  }
-}
-
 .timer-block {
   display: flex;
   flex-direction: column;
@@ -912,7 +876,7 @@ body {
 }
 
 .player-row.just-changed {
-  animation: flash-gold 1.5s ease-out;
+  animation: flash-gold 2s ease-in-out;
 }
 
 /* Scrollbar style for ticker */

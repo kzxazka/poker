@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS public.tournaments (
     last_blind_change_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     blind_interval_secs INT NOT NULL DEFAULT 900,
     total_medals INT NOT NULL DEFAULT 25,
-    center_medals INT NOT NULL DEFAULT 11,
-    center_value BIGINT NOT NULL DEFAULT 22000,
+    center_medals INT NOT NULL DEFAULT 25,
+    center_value BIGINT NOT NULL DEFAULT 50000,
     total_prize BIGINT NOT NULL DEFAULT 50000,
     current_round TEXT DEFAULT 'PRE-FLOP',
     is_paused BOOLEAN NOT NULL DEFAULT FALSE,
@@ -129,7 +129,5 @@ ON CONFLICT (level) DO UPDATE SET
 INSERT INTO public.tournaments (
     id, title, hand, blind_level, blind_interval_secs, total_medals, center_medals, center_value, total_prize, current_round, is_paused
 ) VALUES (
-    'current', 'POKER MES', 1, 1, 900, 25, 11, 22000, 50000, 'PRE-FLOP', FALSE
-) ON CONFLICT (id) DO UPDATE SET
-    title = EXCLUDED.title,
-    blind_interval_secs = EXCLUDED.blind_interval_secs;
+    'current', 'POKER MES', 1, 1, 900, 25, 25, 50000, 50000, 'PRE-FLOP', FALSE
+) ON CONFLICT (id) DO NOTHING;
