@@ -36,6 +36,16 @@
         <span class="op-info-label">CENTER</span>
         <span class="op-info-value gold" id="op-center">11 🏅</span>
       </div>
+      <div class="op-info-chip" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(8, 47, 73, 0.3);">
+        <span class="op-info-label" style="color: #38bdf8;">ROUND 🃏</span>
+        <select id="op-round-select" onchange="changePokerRound(this.value)" style="background: transparent; color: #38bdf8; font-family: var(--font-display); font-size: 14px; font-weight: 800; border: none; outline: none; cursor: pointer; text-transform: uppercase;">
+          <option value="PRE-FLOP" style="background:#0c1118;color:#fff;">1. PRE-FLOP</option>
+          <option value="FLOP" style="background:#0c1118;color:#fff;">2. FLOP (3 KARTU)</option>
+          <option value="TURN" style="background:#0c1118;color:#fff;">3. TURN (1 KARTU)</option>
+          <option value="RIVER" style="background:#0c1118;color:#fff;">4. RIVER (1 KARTU)</option>
+          <option value="SHOWDOWN" style="background:#0c1118;color:#fff;">5. SHOWDOWN</option>
+        </select>
+      </div>
       <div class="op-info-chip" style="cursor: pointer;" onclick="openTimerSettings()" title="Klik untuk edit timer atau tambah waktu">
         <span class="op-info-label">COUNTDOWN ⏳</span>
         <span class="op-info-value mono" id="op-timer">00:00:00</span>
@@ -259,6 +269,39 @@
       <div class="modal-footer">
         <button class="op-btn op-btn-secondary" onclick="closeModal('modal-edit-player')">BATAL</button>
         <button class="op-btn op-btn-gold" onclick="savePlayerEdit()">SIMPAN PERUBAHAN ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ RAISE AMOUNT MODAL ══════════════ -->
+  <div class="modal-overlay" id="modal-raise" style="display:none">
+    <div class="modal modal-compact">
+      <div class="modal-header">
+        <div class="modal-title">💰 INPUT NOMINAL RAISE — <span id="raise-player-name" style="color:var(--gold-light);">PLAYER</span></div>
+        <button class="modal-close" onclick="closeModal('modal-raise')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="raise-player-id" />
+        
+        <div class="form-row">
+          <label class="form-label">TOTAL NOMINAL RAISE (CHIPS)</label>
+          <input type="number" id="raise-amount-input" min="0" step="25" class="form-input" placeholder="Ketik nominal misal: 300" autofocus />
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">PRESET NOMINAL CEPAT</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="raise-quick-presets">
+            <!-- Populated dynamically by JS (Min Raise, 2x BB, 3x BB, Pot, All-in) -->
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:var(--text-secondary);background:var(--bg-card-alt);padding:8px 10px;border-radius:4px;border:1px solid var(--border-subtle);">
+          💡 <span id="raise-player-info">Player chips: 1,600</span>. Nilai raise ini akan langsung tertera di samping nama pemain pada layar monitor & operator.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="op-btn op-btn-secondary" onclick="closeModal('modal-raise')">BATAL</button>
+        <button class="op-btn op-btn-gold" onclick="confirmRaiseAction()">PASANG RAISE ✓</button>
       </div>
     </div>
   </div>

@@ -145,6 +145,11 @@ function tick() {
   if (blind) $opBlind.textContent = `${blind.sb} / ${blind.bb}`;
   $opHand.textContent = `#${GAME_STATE.hand}`;
   $opCenter.textContent = `${GAME_STATE.centerMedals} 🏅`;
+
+  const roundSelect = document.getElementById('op-round-select');
+  if (roundSelect && document.activeElement !== roundSelect) {
+    if (GAME_STATE.currentRound) roundSelect.value = GAME_STATE.currentRound;
+  }
 }
 
 // ── ROLLING DEALER, SB, BB SYSTEM ─────────────────────────
@@ -303,7 +308,7 @@ function buildPlayerCard(player) {
     const isFoldActive = curAction === 'FOLD';
     const isCheckActive = curAction === 'CHECK';
     const isCallActive = curAction === 'CALL';
-    const isRaiseActive = curAction === 'RAISE';
+    const isRaiseActive = curAction.startsWith('RAISE');
     const isAllinActive = curAction === 'ALL-IN' || curAction === 'ALLIN';
 
     liveActionBarHtml = `
@@ -781,6 +786,12 @@ async function setPlayerAction(playerId, action) {
   const player = GAME_STATE.players.find(p => p.id === playerId);
   if (!player) return;
 
+  // If clicking RAISE, open custom nominal modal!
+  if (action === 'RAISE') {
+    triggerRaiseModal(player);
+    return;
+  }
+
   // Toggle off if clicking the same action
   if (player.currentAction === action) {
     player.currentAction = null;
@@ -796,6 +807,88 @@ async function setPlayerAction(playerId, action) {
     await syncPlayerToSupabase(player);
   } catch (err) {
     console.error("Error syncing player action:", err);
+  }
+}
+
+// ── RAISE MODAL & LOGIC ───────────────────────────────────
+function triggerRaiseModal(player) {
+  document.getElementById('raise-player-id').value = player.id;
+  document.getElementById('raise-player-name').textContent = player.name;
+  
+  const curBlind = getCurrentBlind();
+  const bb = curBlind ? curBlind.bb : 150;
+  const playerChips = player.chips || 0;
+
+  document.getElementById('raise-player-info').textContent = `${player.name} memiliki ${playerChips.toLocaleString()} chips (BB saat ini: ${bb})`;
+
+  // Preset default value: 2x BB or 300
+  const defaultRaise = Math.min(playerChips, bb * 2);
+  const inputEl = document.getElementById('raise-amount-input');
+  inputEl.value = defaultRaise;
+  inputEl.max = playerChips;
+
+  // Quick preset buttons
+  const presetsContainer = document.getElementById('raise-quick-presets');
+  const p1 = bb * 2;
+  const p2 = bb * 3;
+  const p3 = bb * 4;
+  const allin = playerChips;
+
+  presetsContainer.innerHTML = `
+    <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="setRaiseVal(${p1})">${p1} (2x BB)</button>
+    <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="setRaiseVal(${p2})">${p2} (3x BB)</button>
+    <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="setRaiseVal(${p3})">${p3} (4x BB)</button>
+    <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;border-color:rgba(192,132,252,0.4);color:#c084fc;" onclick="setRaiseVal(${allin})">ALL-IN (${allin})</button>
+  `;
+
+  openModal('modal-raise');
+  setTimeout(() => {
+    inputEl.focus();
+    inputEl.select();
+  }, 100);
+}
+
+function setRaiseVal(val) {
+  const input = document.getElementById('raise-amount-input');
+  if (input) input.value = val;
+}
+
+async function confirmRaiseAction() {
+  const id = parseInt(document.getElementById('raise-player-id').value);
+  const player = GAME_STATE.players.find(p => p.id === id);
+  if (!player) return;
+
+  const rawVal = parseInt(document.getElementById('raise-amount-input').value);
+  let actionText = 'RAISE';
+  if (!isNaN(rawVal) && rawVal > 0) {
+    actionText = `RAISE ${rawVal.toLocaleString()}`;
+  }
+
+  player.currentAction = actionText;
+
+  saveLocalState();
+  renderPlayerCards();
+  closeModal('modal-raise');
+
+  // Sync to Supabase
+  try {
+    await syncPlayerToSupabase(player);
+  } catch (err) {
+    console.error("Error syncing raise action:", err);
+  }
+}
+
+// ── POKER ROUND SESSIONS (PRE-FLOP, FLOP, TURN, RIVER, SHOWDOWN) ──
+async function changePokerRound(roundName) {
+  GAME_STATE.currentRound = roundName;
+  saveLocalState();
+  
+  // Sync tournament to Supabase so Public Display updates immediately
+  try {
+    await syncTournamentToSupabase();
+    showOpAlert("SESI DIUBAH", `Sesi ronde meja berhasil dialihkan ke: ${roundName}!\nLayar monitor publik langsung tersinkronisasi.`, "green");
+  } catch (err) {
+    console.error("Error updating round:", err);
   }
 }
 

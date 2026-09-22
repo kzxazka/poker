@@ -177,17 +177,17 @@ function buildPlayerCard(player, rankNum) {
   if (!isElim && player.currentAction) {
     const act = player.currentAction.toUpperCase();
     if (act.includes('RAISE')) {
-      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-extrabold bg-[#451a03] border border-[#d97706] text-[#fbbf24] shadow-[0_0_10px_rgba(245,158,11,0.3)] animate-pulse">RAISE</span>`;
+      nameActionBadge = `<span class="ml-2 px-2.5 py-0.5 rounded text-xs font-mono font-extrabold bg-[#451a03] border border-[#d97706] text-[#fbbf24] shadow-[0_0_10px_rgba(245,158,11,0.3)] animate-pulse tracking-wide">${player.currentAction}</span>`;
     } else if (act.includes('CALL')) {
-      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-extrabold bg-[#064e3b] border border-[#059669] text-[#34d399] shadow-[0_0_10px_rgba(16,185,129,0.3)]">CALL</span>`;
+      nameActionBadge = `<span class="ml-2 px-2.5 py-0.5 rounded text-xs font-mono font-extrabold bg-[#064e3b] border border-[#059669] text-[#34d399] shadow-[0_0_10px_rgba(16,185,129,0.3)] tracking-wide">${player.currentAction}</span>`;
     } else if (act.includes('CHECK')) {
-      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-extrabold bg-[#082f49] border border-[#0284c7] text-[#38bdf8]">CHECK</span>`;
+      nameActionBadge = `<span class="ml-2 px-2.5 py-0.5 rounded text-xs font-mono font-extrabold bg-[#082f49] border border-[#0284c7] text-[#38bdf8] tracking-wide">${player.currentAction}</span>`;
     } else if (act.includes('FOLD')) {
-      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#1e293b] border border-[#64748b] text-[#94a3b8]">FOLD</span>`;
+      nameActionBadge = `<span class="ml-2 px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-[#1e293b] border border-[#64748b] text-[#94a3b8] tracking-wide">FOLD</span>`;
     } else if (act.includes('ALL-IN') || act.includes('ALLIN')) {
-      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-extrabold bg-[#3b0764] border border-[#9333ea] text-[#c084fc] shadow-[0_0_12px_rgba(192,132,252,0.4)] animate-bounce">ALL-IN</span>`;
+      nameActionBadge = `<span class="ml-2 px-2.5 py-0.5 rounded text-xs font-mono font-extrabold bg-[#3b0764] border border-[#9333ea] text-[#c084fc] shadow-[0_0_12px_rgba(192,132,252,0.4)] animate-bounce tracking-wide">${player.currentAction}</span>`;
     } else if (!act.includes('DEALER') && !act.includes('BLIND')) {
-      nameActionBadge = `<span class="ml-2 px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#141e2e] border border-[#23354e] text-slate-300">${player.currentAction}</span>`;
+      nameActionBadge = `<span class="ml-2 px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-[#141e2e] border border-[#23354e] text-slate-300 tracking-wide">${player.currentAction}</span>`;
     }
   }
 
