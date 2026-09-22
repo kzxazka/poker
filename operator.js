@@ -599,7 +599,18 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 // TIMER & BLIND SETTINGS CONTROLLER
 // ══════════════════════════════════════════════════════════
 function openTimerSettings() {
-  document.getElementById('timer-blind-level').value = GAME_STATE.blindLevel || 1;
+  const levelSelect = document.getElementById('timer-blind-level');
+  if (levelSelect && GAME_STATE.blindSchedule) {
+    levelSelect.innerHTML = '';
+    GAME_STATE.blindSchedule.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.level;
+      opt.textContent = `Level ${b.level} (${b.sb} / ${b.bb})`;
+      if (b.level === (GAME_STATE.blindLevel || 1)) opt.selected = true;
+      levelSelect.appendChild(opt);
+    });
+  }
+
   document.getElementById('timer-duration-min').value = Math.round((GAME_STATE.blindIntervalSecs || 900) / 60);
 
   // Current blind countdown remaining

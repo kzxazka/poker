@@ -625,16 +625,64 @@
 
   <!-- CONTROLLER SCRIPT -->
   <script>
-    let players = [
-      { id: 1, seat: '01', name: 'ANDI',  chips: 2450, medals: 6, position: 'D',  status: 'ready' },
-      { id: 2, seat: '02', name: 'FADLI', chips: 2100, medals: 4, position: 'SB', status: 'active' },
-      { id: 3, seat: '03', name: 'DENI',  chips: 1800, medals: 2, position: 'BB', status: 'active' },
-      { id: 4, seat: '04', name: 'BUDI',  chips: 1100, medals: 3, position: '',   status: 'active' },
-      { id: 5, seat: '05', name: 'HADI',  chips: 900,  medals: 2, position: '',   status: 'active' },
-      { id: 6, seat: '06', name: 'CACA',  chips: 650,  medals: 7, position: '',   status: 'active' },
-      { id: 7, seat: '07', name: 'EKO',   chips: 400,  medals: 1, position: '',   status: 'lasttry', lastTryUsed: true },
-      { id: 8, seat: '08', name: 'GITA',  chips: 0,    medals: 0, position: '',   status: 'eliminated', lastTryUsed: true }
-    ];
+    let players = [];
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await fetchSupabaseState();
+      populateFormFromState();
+    });
+
+    function populateFormFromState() {
+      // 1. Populate players
+      if (GAME_STATE.players && GAME_STATE.players.length > 0) {
+        players = GAME_STATE.players.map((p, idx) => ({
+          id: p.id,
+          seat: String(idx + 1).padStart(2, '0'),
+          name: p.name,
+          chips: p.chips,
+          medals: p.medals,
+          position: p.positionRole || '',
+          status: p.status,
+          lastTryUsed: p.lastTryUsed
+        }));
+      } else {
+        // Fallback default structure
+        loadDefaultRoster();
+      }
+      renderPlayerTable();
+
+      // 2. Populate blind schedules dropdown
+      renderStartingLevelDropdown();
+
+      // 3. Populate economy & timer
+      if (GAME_STATE.blindIntervalSecs) {
+        const minVal = Math.round(GAME_STATE.blindIntervalSecs / 60);
+        const sel = document.getElementById('selectBlindTimer');
+        if (sel) sel.value = String(minVal);
+      }
+      if (GAME_STATE.totalMedals) {
+        document.getElementById('inputCenterMedals').value = GAME_STATE.totalMedals;
+      }
+      if (GAME_STATE.rupiahPerMedal) {
+        document.getElementById('inputRupiahPerMedal').value = GAME_STATE.rupiahPerMedal;
+      }
+      if (GAME_STATE.rebuyChips) {
+        document.getElementById('inputRebuyChips').value = GAME_STATE.rebuyChips;
+      }
+    }
+
+    function renderStartingLevelDropdown() {
+      const sel = document.getElementById('selectStartingLevel');
+      if (!sel) return;
+      sel.innerHTML = '';
+      (GAME_STATE.blindSchedule || []).forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.level;
+        opt.textContent = `Level ${b.level} (${b.sb} / ${b.bb})`;
+        if (b.level === (GAME_STATE.blindLevel || 1)) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
 
     function goToStep(stepId) {
       document.getElementById('stepWelcome').classList.add('hidden');

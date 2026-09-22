@@ -71,14 +71,19 @@ async function fetchSupabaseState() {
 
     if (!tErr && tourney) {
       GAME_STATE.title = tourney.title || 'POKER MES';
-      GAME_STATE.hand = tourney.hand || 24;
-      GAME_STATE.blindLevel = tourney.blind_level || 3;
+      GAME_STATE.hand = tourney.hand || 1;
+      GAME_STATE.blindLevel = tourney.blind_level || 1;
+      GAME_STATE.blindIntervalSecs = tourney.blind_interval_secs || 900;
       GAME_STATE.totalMedals = tourney.total_medals || 25;
       GAME_STATE.centerMedals = tourney.center_medals ?? 11;
       GAME_STATE.centerValue = tourney.center_value || 22000;
       GAME_STATE.totalPrize = tourney.total_prize || 50000;
       GAME_STATE.currentRound = tourney.current_round || 'PRE-FLOP';
       GAME_STATE.isPaused = !!tourney.is_paused;
+      GAME_STATE.anteEnabled = !!tourney.ante_enabled;
+      GAME_STATE.anteValue = tourney.ante_value || 25;
+      GAME_STATE.rebuyChips = tourney.rebuy_chips || 400;
+      GAME_STATE.rupiahPerMedal = tourney.rupiah_per_medal || 2000;
       if (tourney.event_start_time) {
         GAME_STATE.eventStartTime = new Date(tourney.event_start_time).getTime();
       }
@@ -87,13 +92,28 @@ async function fetchSupabaseState() {
       }
     }
 
-    // 2. Players list
+    // 2. Blind schedules from database
+    const { data: blindsData, error: bErr } = await sb
+      .from('blind_schedules')
+      .select('*')
+      .order('level', { ascending: true });
+
+    if (!bErr && blindsData && blindsData.length > 0) {
+      GAME_STATE.blindSchedule = blindsData.map(b => ({
+        level: b.level,
+        sb: b.sb,
+        bb: b.bb,
+        ante: b.ante || 0
+      }));
+    }
+
+    // 3. Players list
     const { data: playersData, error: pErr } = await sb
       .from('players')
       .select('*')
       .order('sort_order', { ascending: true });
 
-    if (!pErr && playersData && playersData.length > 0) {
+    if (!pErr && playersData) {
       GAME_STATE.players = playersData.map(p => ({
         id: p.id,
         name: p.name,
@@ -107,14 +127,14 @@ async function fetchSupabaseState() {
       }));
     }
 
-    // 3. Hand history
+    // 4. Hand history
     const { data: handsData, error: hErr } = await sb
       .from('hand_history')
       .select('*')
       .order('id', { ascending: false })
       .limit(6);
 
-    if (!hErr && handsData && handsData.length > 0) {
+    if (!hErr && handsData) {
       GAME_STATE.recentHands = handsData.map(h => ({
         hand: h.hand,
         winner: h.winner,
@@ -140,6 +160,9 @@ function subscribeToSupabase() {
       fetchSupabaseState();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+      fetchSupabaseState();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'blind_schedules' }, () => {
       fetchSupabaseState();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'hand_history' }, () => {

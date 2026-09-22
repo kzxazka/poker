@@ -6,17 +6,21 @@
 CREATE TABLE IF NOT EXISTS public.tournaments (
     id TEXT PRIMARY KEY DEFAULT 'current',
     title TEXT NOT NULL DEFAULT 'POKER MES',
-    hand INT NOT NULL DEFAULT 24,
-    event_start_time TIMESTAMPTZ NOT NULL DEFAULT NOW() - INTERVAL '83 minutes 42 seconds',
-    blind_level INT NOT NULL DEFAULT 3,
-    last_blind_change_time TIMESTAMPTZ NOT NULL DEFAULT NOW() - INTERVAL '13 minutes 42 seconds',
-    blind_interval_secs INT NOT NULL DEFAULT 1200,
+    hand INT NOT NULL DEFAULT 1,
+    event_start_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    blind_level INT NOT NULL DEFAULT 1,
+    last_blind_change_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    blind_interval_secs INT NOT NULL DEFAULT 900,
     total_medals INT NOT NULL DEFAULT 25,
     center_medals INT NOT NULL DEFAULT 11,
     center_value BIGINT NOT NULL DEFAULT 22000,
     total_prize BIGINT NOT NULL DEFAULT 50000,
     current_round TEXT DEFAULT 'PRE-FLOP',
     is_paused BOOLEAN NOT NULL DEFAULT FALSE,
+    ante_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    ante_value INT NOT NULL DEFAULT 25,
+    rebuy_chips INT NOT NULL DEFAULT 400,
+    rupiah_per_medal INT NOT NULL DEFAULT 2000,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -34,7 +38,16 @@ CREATE TABLE IF NOT EXISTS public.players (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 3. Tabel Hand History / Events
+-- 3. Tabel Blind Schedules (Dinamis dari Database)
+CREATE TABLE IF NOT EXISTS public.blind_schedules (
+    level INT PRIMARY KEY,
+    sb INT NOT NULL,
+    bb INT NOT NULL,
+    ante INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 4. Tabel Hand History / Events
 CREATE TABLE IF NOT EXISTS public.hand_history (
     id BIGSERIAL PRIMARY KEY,
     hand INT NOT NULL,
@@ -44,50 +57,54 @@ CREATE TABLE IF NOT EXISTS public.hand_history (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. Enable Row Level Security (RLS) & Allow public read/write for tournament app
+-- 5. Enable Row Level Security (RLS) & Allow public read/write for tournament app
 ALTER TABLE public.tournaments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.blind_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hand_history ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+    DROP POLICY IF EXISTS "Allow all public on tournaments" ON public.tournaments;
+    DROP POLICY IF EXISTS "Allow all public on players" ON public.players;
+    DROP POLICY IF EXISTS "Allow all public on blind_schedules" ON public.blind_schedules;
+    DROP POLICY IF EXISTS "Allow all public on hand_history" ON public.hand_history;
+END $$;
 
 CREATE POLICY "Allow all public on tournaments" ON public.tournaments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all public on players" ON public.players FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all public on blind_schedules" ON public.blind_schedules FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all public on hand_history" ON public.hand_history FOR ALL USING (true) WITH CHECK (true);
 
--- 5. Enable Realtime Publications
+-- 6. Enable Realtime Publications
 ALTER PUBLICATION supabase_realtime ADD TABLE public.tournaments;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.players;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.blind_schedules;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.hand_history;
 
--- 6. Seed Initial Tournament Data
+-- 7. Seed Official 1:2 Blind Structure (SB kelipatan 25, BB kelipatan 50)
+INSERT INTO public.blind_schedules (level, sb, bb, ante) VALUES
+(1, 25, 50, 0),
+(2, 50, 100, 0),
+(3, 75, 150, 0),
+(4, 100, 200, 25),
+(5, 125, 250, 25),
+(6, 150, 300, 50),
+(7, 175, 350, 50),
+(8, 200, 400, 50),
+(9, 250, 500, 75),
+(10, 300, 600, 100),
+(11, 350, 700, 100),
+(12, 400, 800, 100)
+ON CONFLICT (level) DO UPDATE SET
+    sb = EXCLUDED.sb,
+    bb = EXCLUDED.bb,
+    ante = EXCLUDED.ante;
+
+-- 8. Initialize Tournament Default State
 INSERT INTO public.tournaments (
-    id, title, hand, blind_level, total_medals, center_medals, center_value, total_prize, current_round
+    id, title, hand, blind_level, blind_interval_secs, total_medals, center_medals, center_value, total_prize, current_round, is_paused
 ) VALUES (
-    'current', 'POKER MES', 24, 3, 25, 11, 22000, 50000, 'PRE-FLOP'
-) ON CONFLICT (id) DO NOTHING;
-
--- Seed Initial 8 Players
-INSERT INTO public.players (id, name, chips, medals, last_try_used, status, position_role, current_action, sort_order) VALUES
-(1, 'ANDI', 2450, 6, FALSE, 'ready', 'D', 'RAISE +300', 1),
-(2, 'FADLI', 2100, 4, FALSE, 'active', 'SB', 'CALL 150', 2),
-(3, 'DENI', 1800, 2, FALSE, 'active', 'BB', 'CHECK', 3),
-(4, 'BUDI', 1100, 3, FALSE, 'active', NULL, 'FOLD', 4),
-(5, 'HADI', 900, 2, FALSE, 'active', NULL, 'CALL 150', 5),
-(6, 'CACA', 650, 7, FALSE, 'active', NULL, 'FOLD', 6),
-(7, 'EKO', 400, 1, TRUE, 'lasttry', NULL, 'LAST TRY USED', 7),
-(8, 'GITA', 0, 0, TRUE, 'eliminated', NULL, 'ELIMINATED', 8)
-ON CONFLICT (id) DO UPDATE SET
-    name = EXCLUDED.name,
-    chips = EXCLUDED.chips,
-    medals = EXCLUDED.medals,
-    last_try_used = EXCLUDED.last_try_used,
-    status = EXCLUDED.status,
-    position_role = EXCLUDED.position_role,
-    current_action = EXCLUDED.current_action,
-    sort_order = EXCLUDED.sort_order;
-
--- Seed Sample Recent Hands
-INSERT INTO public.hand_history (hand, winner, deltas) VALUES
-(23, 'ANDI', '[{"name":"ANDI","medals":3},{"name":"BUDI","medals":-2},{"name":"DENI","medals":-1},{"name":"CENTER","medals":-1}]'::jsonb),
-(22, 'FADLI', '[{"name":"FADLI","medals":2},{"name":"CACA","medals":-1},{"name":"CENTER","medals":-1}]'::jsonb),
-(21, 'BUDI', '[{"name":"BUDI","medals":2},{"name":"CENTER","medals":-1},{"name":"HADI","medals":-1}]'::jsonb),
-(20, 'EKO', '[{"name":"EKO","medals":0},{"name":"GITA","medals":0,"note":"ELIMINATED"}]'::jsonb);
+    'current', 'POKER MES', 1, 1, 900, 25, 11, 22000, 50000, 'PRE-FLOP', FALSE
+) ON CONFLICT (id) DO UPDATE SET
+    title = EXCLUDED.title,
+    blind_interval_secs = EXCLUDED.blind_interval_secs;
