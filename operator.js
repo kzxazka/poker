@@ -3,7 +3,7 @@
    Full hand resolution, medal conversion, bust handling
 ═══════════════════════════════════════════════════════════ */
 
-loadState();
+loadLocalFallback();
 
 // ── State ─────────────────────────────────────────────────
 let isPaused = false;
@@ -233,21 +233,38 @@ async function togglePause() {
 // ══════════════════════════════════════════════════════════
 function renderPlayerCards() {
   $playerGrid.innerHTML = '';
+  if (!GAME_STATE.players || GAME_STATE.players.length === 0) {
+    $playerGrid.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--text-secondary); background: var(--bg-card); border-radius: 8px; border: 1px dashed var(--border-mid);">
+        <p style="font-size:16px; font-weight:600; margin-bottom:8px; color:var(--text-primary);">Belum ada data pemain di memori</p>
+        <p style="font-size:13px; margin-bottom:16px;">Klik tombol di bawah untuk memuat pemain dari database Supabase atau reset ke 8 pemain default.</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+          <button class="op-btn op-btn-gold" onclick="loadActiveGame()">🔄 SYNC SUPABASE</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
   GAME_STATE.players.forEach(p => {
-    $playerGrid.appendChild(buildPlayerCard(p));
+    try {
+      $playerGrid.appendChild(buildPlayerCard(p));
+    } catch(err) {
+      console.error("Error rendering player card for", p, err);
+    }
   });
 }
 
 function buildPlayerCard(player) {
   const div = document.createElement('div');
-  div.className = `op-player-card status-${player.status}`;
+  const status = player.status || 'active';
+  div.className = `op-player-card status-${status}`;
   div.dataset.id = player.id;
 
   let badgeClass = 'badge-active';
   let badgeText = 'ACTIVE';
-  if (player.status === 'ready') { badgeClass = 'badge-ready'; badgeText = 'READY'; }
-  if (player.status === 'lasttry') { badgeClass = 'badge-lasttry'; badgeText = 'LAST TRY USED'; }
-  if (player.status === 'eliminated') { badgeClass = 'badge-eliminated'; badgeText = 'ELIMINATED'; }
+  if (status === 'ready') { badgeClass = 'badge-ready'; badgeText = 'READY'; }
+  if (status === 'lasttry') { badgeClass = 'badge-lasttry'; badgeText = 'LAST TRY USED'; }
+  if (status === 'eliminated') { badgeClass = 'badge-eliminated'; badgeText = 'ELIMINATED'; }
 
   let roleBadge = '';
   if (player.positionRole === 'D') {
@@ -258,9 +275,10 @@ function buildPlayerCard(player) {
     roleBadge = '<span style="font-size:10px;font-weight:800;background:#c084fc;color:#000;padding:2px 6px;border-radius:3px;margin-left:6px;">BB</span>';
   }
 
-  const isElim = player.status === 'eliminated';
-  const chipsStr = isElim ? '—' : player.chips.toLocaleString();
-  const medalsStr = String(player.medals);
+  const isElim = status === 'eliminated';
+  const chipsNum = player.chips != null ? player.chips : 0;
+  const chipsStr = isElim ? '—' : chipsNum.toLocaleString();
+  const medalsStr = String(player.medals != null ? player.medals : 0);
 
   let actionsHtml = '';
   if (!isElim) {
@@ -547,7 +565,7 @@ function confirmHand() {
   // Auto-roll Dealer, Small Blind, and Big Blind to next players
   rollDealerPositions(true);
 
-  saveState();
+  saveLocalState();
   renderPlayerCards();
   renderLog();
   closeModal('modal-confirm');
@@ -624,7 +642,7 @@ function handleBust(players, index) {
   const footer = document.querySelector('#modal-bust .modal-footer');
   footer.innerHTML = `<button class="op-btn op-btn-gold full-width" onclick="nextBust(${JSON.stringify(players.map(p => p.id))}, ${index + 1})">CONTINUE →</button>`;
 
-  saveState();
+  saveLocalState();
   renderPlayerCards();
   openModal('modal-bust');
 }
@@ -703,7 +721,7 @@ function confirmConvert() {
   player.chips += convertAmount * MEDAL_VALUE;
   player.medals -= convertAmount;
 
-  saveState();
+  saveLocalState();
   renderPlayerCards();
   closeModal('modal-convert');
 
@@ -729,7 +747,7 @@ function editPlayer(playerId) {
     if (!isNaN(medals) && medals >= 0) player.medals = medals;
   }
 
-  saveState();
+  saveLocalState();
   renderPlayerCards();
 
   // Supabase sync

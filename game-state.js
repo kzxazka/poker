@@ -31,7 +31,16 @@ const GAME_STATE = {
   currentRound: 'PRE-FLOP',
   isPaused: false,
 
-  players: [],
+  players: [
+    { id: 1, name: 'APIS', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: 'D', currentAction: 'DEALER', sortOrder: 1 },
+    { id: 2, name: 'FADLI', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: 'SB', currentAction: 'SMALL BLIND', sortOrder: 2 },
+    { id: 3, name: 'NOPAL', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: 'BB', currentAction: 'BIG BLIND', sortOrder: 3 },
+    { id: 4, name: 'RAFY', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: null, currentAction: null, sortOrder: 4 },
+    { id: 5, name: 'UCUP', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: null, currentAction: null, sortOrder: 5 },
+    { id: 6, name: 'AZKA', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: null, currentAction: null, sortOrder: 6 },
+    { id: 7, name: 'ZORA', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: null, currentAction: null, sortOrder: 7 },
+    { id: 8, name: 'ISMAIL', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: null, currentAction: null, sortOrder: 8 }
+  ],
   recentHands: []
 };
 
@@ -231,7 +240,17 @@ function loadLocalFallback() {
   try {
     const s = localStorage.getItem('poker_mes_state');
     if (s) {
-      Object.assign(GAME_STATE, JSON.parse(s));
+      const parsed = JSON.parse(s);
+      if (parsed.players && parsed.players.length > 0) {
+        Object.assign(GAME_STATE, parsed);
+      } else {
+        // preserve existing default players if local cache players array is empty
+        const defaultPlayers = [...GAME_STATE.players];
+        Object.assign(GAME_STATE, parsed);
+        if (!GAME_STATE.players || GAME_STATE.players.length === 0) {
+          GAME_STATE.players = defaultPlayers;
+        }
+      }
       notifyStateChanged();
     }
   } catch(e) {}
