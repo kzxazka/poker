@@ -30,19 +30,30 @@ const $recentEventsLog= document.getElementById('recent-events-log');
 const $blindScheduleList = document.getElementById('blind-schedule-list');
 
 // ── Init ──────────────────────────────────────────────────
+let renderUIPending = false;
+
+function scheduleRenderUI() {
+  if (renderUIPending) return;
+  renderUIPending = true;
+  requestAnimationFrame(() => {
+    renderUIPending = false;
+    renderUI();
+  });
+}
+
 async function init() {
   renderBlindSchedule();
   
-  // Register state change listener
+  // Register state change listener with debounced scheduler
   onGameStateChange(() => {
-    renderUI();
+    scheduleRenderUI();
     tick();
   });
 
   // 1. Initial fetch from Supabase
   await fetchSupabaseState();
 
-  // 2. Always render after initial fetch (even if fetch returned early due to timestamp guards)
+  // 2. Always render after initial fetch
   renderUI();
 
   // 3. Subscribe to Supabase real-time
@@ -127,17 +138,47 @@ function renderHeaderMetrics() {
 }
 
 // ── Render Players Table (STRICT SEATING ORDER - NO REORDERING) ─────────
+let lastPlayersSnapshot = '';
+
 function renderPlayers() {
   const list = $playerList;
   const players = [...GAME_STATE.players];
 
   if (!players || players.length === 0) {
     list.innerHTML = `<div class="p-8 text-center text-slate-500 font-mono">Loading players from Supabase...</div>`;
+    lastPlayersSnapshot = '';
     return;
   }
 
   // CRITICAL: NEVER REORDER PLAYERS! Maintain original table seat order:
   const sorted = players.sort((a, b) => (a.sortOrder || a.id) - (b.sortOrder || b.id));
+
+  // Fingerprint check to prevent needless DOM rebuilds / flickering
+  const curBlind = getCurrentBlind() || { sb: 25, bb: 50 };
+  const snapshotData = sorted.map(p => ({
+    id: p.id,
+    name: p.name,
+    chips: p.chips,
+    medals: p.medals,
+    status: p.status,
+    role: p.positionRole,
+    action: p.currentAction,
+    contrib: (GAME_STATE.currentHandContributions && GAME_STATE.currentHandContributions[p.id]) || 0,
+    roundBet: (GAME_STATE.roundBets && GAME_STATE.roundBets[p.id]) || 0,
+    isTurn: GAME_STATE.activeTurnPlayerId === p.id,
+    isFold: (GAME_STATE.foldedPlayerIds || []).includes(p.id) || (p.currentAction === 'FOLD'),
+    hasActed: (GAME_STATE.actedInRound || []).includes(p.id),
+    round: GAME_STATE.currentRound,
+    curBet: GAME_STATE.currentBet,
+    sb: curBlind.sb,
+    bb: curBlind.bb
+  }));
+  const snapshotStr = JSON.stringify(snapshotData);
+
+  if (snapshotStr === lastPlayersSnapshot && list.children.length === sorted.length) {
+    return; // State visually unchanged, skip DOM wipe to eliminate all flickering
+  }
+  lastPlayersSnapshot = snapshotStr;
 
   list.innerHTML = '';
   sorted.forEach((player, idx) => {
@@ -155,6 +196,7 @@ function buildPlayerCard(player, rankNum) {
 
   const curBlind = getCurrentBlind() || { sb: 25, bb: 50 };
   const curPaid = (GAME_STATE.roundBets && GAME_STATE.roundBets[player.id]) || 0;
+  const handContribution = (GAME_STATE.currentHandContributions && GAME_STATE.currentHandContributions[player.id]) || 0;
   const curBet = Math.max(GAME_STATE.currentBet || 0, (GAME_STATE.currentRound === 'PRE-FLOP' ? curBlind.bb : 0));
   const toCall = Math.max(0, curBet - curPaid);
 
@@ -267,7 +309,7 @@ function buildPlayerCard(player, rankNum) {
     } else if (player.currentAction) {
       const act = player.currentAction.toUpperCase();
       if (act.includes('RAISE')) {
-        nameActionBadge = `<span class="ml-2 px-3 py-1 rounded-full text-xs font-mono font-black bg-[#451a03] border border-[#d97706] text-[#fbbf24] shadow-[0_0_12px_rgba(245,158,11,0.4)] animate-pulse tracking-wide">${player.currentAction}</span>`;
+        nameActionBadge = `<span class="ml-2 px-3 py-1 rounded-full text-xs font-mono font-black bg-[#451a03] border border-[#d97706] text-[#fbbf24] shadow-[0_0_12px_rgba(245,158,11,0.4)] tracking-wide">${player.currentAction}</span>`;
       } else if (act.includes('CALL')) {
         nameActionBadge = `<span class="ml-2 px-3 py-1 rounded-full text-xs font-mono font-black bg-[#064e3b] border border-[#059669] text-[#34d399] shadow-[0_0_12px_rgba(16,185,129,0.4)] tracking-wide">${player.currentAction}</span>`;
       } else if (act.includes('CHECK')) {
@@ -275,7 +317,7 @@ function buildPlayerCard(player, rankNum) {
       } else if (act.includes('FOLD')) {
         nameActionBadge = `<span class="ml-2 px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#1e293b] border border-[#64748b] text-[#94a3b8] tracking-wide">FOLD</span>`;
       } else if (act.includes('ALL-IN') || act.includes('ALLIN')) {
-        nameActionBadge = `<span class="ml-2 px-3 py-1 rounded-full text-xs font-mono font-black bg-[#3b0764] border border-[#9333ea] text-[#c084fc] shadow-[0_0_14px_rgba(192,132,252,0.5)] animate-bounce tracking-wide">${player.currentAction}</span>`;
+        nameActionBadge = `<span class="ml-2 px-3 py-1 rounded-full text-xs font-mono font-black bg-[#3b0764] border border-[#9333ea] text-[#c084fc] shadow-[0_0_14px_rgba(192,132,252,0.5)] tracking-wide">${player.currentAction}</span>`;
       }
     }
   }
@@ -283,8 +325,9 @@ function buildPlayerCard(player, rankNum) {
   const nameClass = isElim ? 'text-[#475569] line-through' : (isFolded ? 'text-slate-500' : 'text-white');
 
   article.innerHTML = `
-    <!-- Left: Rank, Role, Name, Action Badge -->
-    <div class="flex items-center gap-3 md:gap-4 min-w-[220px] md:min-w-[300px] flex-wrap">
+    <!-- Left: Hand Contribution Badge (FAR LEFT), Rank, Role, Name, Action Badge -->
+    <div class="flex items-center gap-3 md:gap-4 min-w-[220px] md:min-w-[340px] flex-wrap">
+      <span class="px-2.5 py-1 rounded-md text-[11px] font-mono font-black bg-[#10243a] border border-[#24527d] text-[#7dd3fc] tracking-wide whitespace-nowrap shadow-sm" title="Total chips yang dikontribusikan di hand ini">HAND: ${handContribution.toLocaleString()} CHIPS</span>
       <span class="text-sm font-mono font-bold text-[#44546d] w-6">${String(rankNum).padStart(2, '0')}</span>
       ${roleBadge}
       <span class="text-2xl md:text-3xl font-display font-bold tracking-wider ${nameClass}">${player.name}</span>

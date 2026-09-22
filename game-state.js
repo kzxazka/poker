@@ -2,8 +2,8 @@
    POKER MES — SHARED GAME STATE & SUPABASE SYNC
 ═══════════════════════════════════════════════════════════ */
 
-// Fallback player roster — only used if Supabase has no player data.
-// Actual values are set by launchTournament() in launcher.html and stored in Supabase.
+// Suggested roster used only by the launcher form. A public/operator view must never
+// invent players when no tournament has been created yet.
 const DEFAULT_PLAYERS = [
   { id: 1, name: 'PLAYER 1', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: 'D', currentAction: null, sortOrder: 1 },
   { id: 2, name: 'PLAYER 2', chips: 1600, medals: 0, lastTryUsed: false, status: 'active', positionRole: 'SB', currentAction: null, sortOrder: 2 },
@@ -56,7 +56,7 @@ const GAME_STATE = {
   stateVersion: 0,
   lastUpdated: 0,                          // 0 = no local data yet, always accept Supabase
 
-  players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
+  players: [],
   recentHands: []
 };
 
@@ -69,6 +69,42 @@ function notifyStateChanged() {
   stateListeners.forEach(fn => {
     try { fn(GAME_STATE); } catch(e) { console.error(e); }
   });
+}
+
+// Clear the in-memory and browser-cached game so a database reset cannot revive
+// an old tournament on this device. The launcher supplies its own suggested roster.
+function resetGameStateMemory() {
+  Object.assign(GAME_STATE, {
+    title: 'POKER MES',
+    hand: 1,
+    eventStartTime: Date.now(),
+    countdownTotalSecs: 2 * 3600,
+    blindLevel: 1,
+    blindSchedule: [],
+    blindIntervalSecs: 15 * 60,
+    lastBlindChangeTime: Date.now(),
+    totalMedals: 25,
+    centerMedals: 25,
+    centerValue: 50000,
+    totalPrize: 50000,
+    currentRound: 'PRE-FLOP',
+    activeTurnPlayerId: null,
+    currentBet: 0,
+    pot: 0,
+    currentHandContributions: {},
+    roundBets: {},
+    actedInRound: [],
+    foldedPlayerIds: [],
+    lastRaiserId: null,
+    isPaused: false,
+    stateVersion: 0,
+    lastUpdated: 0,
+    players: [],
+    recentHands: []
+  });
+  lastSavedStateString = '';
+  try { localStorage.removeItem('poker_mes_state'); } catch (e) {}
+  notifyStateChanged();
 }
 
 // ── Unified High-Speed Sync Channels (0ms Local + ~20ms Cross-Device WebSocket) ──
@@ -95,9 +131,12 @@ if (typeof window !== 'undefined') {
       try {
         const parsed = JSON.parse(e.newValue);
         if (parsed) {
-          applyStateUpdate(parsed, false, parsed.stateVersion, parsed.lastUpdated);
+          applyStateUpdate(parsed, false, parsed.stateVersion, parsed.lastUpdated, false);
         }
       } catch (err) {}
+    } else if (e.key === 'poker_mes_state' && e.newValue === null) {
+      // A reset in another tab/device cleared the browser cache.
+      resetGameStateMemory();
     }
   });
 }
@@ -151,16 +190,24 @@ function handleIncomingBroadcast(data) {
   }
 }
 
-function applyStateUpdate(incoming, shouldBroadcast = true, incomingVersion = 0, incomingTimestamp = 0) {
+function applyStateUpdate(incoming, shouldBroadcast = true, incomingVersion = 0, incomingTimestamp = 0, shouldSaveLocal = true) {
   if (!incoming) return;
 
   const ts = incomingTimestamp || incoming.lastUpdated || 0;
-  // If an incoming update has an older timestamp than our current in-memory state, ignore it
+  const inVer = incomingVersion || incoming.stateVersion || 0;
+
+  // Guard against stale or identical updates causing ping-pong loops
+  if (inVer && GAME_STATE.stateVersion && inVer < GAME_STATE.stateVersion) {
+    return;
+  }
   if (ts && GAME_STATE.lastUpdated && ts < GAME_STATE.lastUpdated) {
     return;
   }
+  if (inVer && ts && inVer === GAME_STATE.stateVersion && ts === GAME_STATE.lastUpdated) {
+    return;
+  }
 
-  GAME_STATE.stateVersion = incomingVersion || incoming.stateVersion || (GAME_STATE.stateVersion || 0) + 1;
+  GAME_STATE.stateVersion = inVer || (GAME_STATE.stateVersion || 0) + 1;
   GAME_STATE.lastUpdated = ts || Date.now();
 
   if (incoming.title !== undefined) GAME_STATE.title = incoming.title;
@@ -195,7 +242,9 @@ function applyStateUpdate(incoming, shouldBroadcast = true, incomingVersion = 0,
     GAME_STATE.blindSchedule = incoming.blindSchedule;
   }
 
-  saveLocalState(false);
+  if (shouldSaveLocal) {
+    saveLocalState(false);
+  }
   notifyStateChanged();
 
   if (shouldBroadcast) {
@@ -336,15 +385,8 @@ async function fetchSupabaseState(force = false) {
         sortOrder: p.sort_order
       }));
 
-      // Guarantee all 8 players exist
-      if (mapped.length < 8) {
-        mapped = DEFAULT_PLAYERS.map(defP => {
-          const found = mapped.find(m => m.id === defP.id || m.name === defP.name);
-          return found ? { ...defP, ...found } : defP;
-        });
-        syncAllPlayersToSupabase().catch(console.error);
-      }
-
+      // The roster is defined by setup and may contain 2–10 players.
+      // Never fill it with fallback seats, or setup names/counts get overwritten.
       GAME_STATE.players = mapped;
     }
 
@@ -431,12 +473,17 @@ function subscribeToSupabase() {
       }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, (payload) => {
-      if (payload && payload.new) {
+      if (payload && payload.eventType === 'DELETE') {
+        resetGameStateMemory();
+      } else if (payload && payload.new) {
         applyTournamentRow(payload.new);
       }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, (payload) => {
-      if (payload && payload.new) {
+      if (payload && payload.eventType === 'DELETE' && payload.old) {
+        GAME_STATE.players = GAME_STATE.players.filter(p => p.id !== payload.old.id);
+        notifyStateChanged();
+      } else if (payload && payload.new) {
         applyPlayerRow(payload.new);
       }
     })
@@ -562,9 +609,19 @@ async function syncHandHistoryToSupabase(handRecord) {
 }
 
 // ── Local Fallback (Cache) ────────────────────────────────
+let lastSavedStateString = '';
+
 function saveLocalState(shouldBroadcast = true) {
   try {
-    localStorage.setItem('poker_mes_state', JSON.stringify(GAME_STATE));
+    const json = JSON.stringify(GAME_STATE);
+    if (json === lastSavedStateString) {
+      if (shouldBroadcast) {
+        broadcastState('STATE_UPDATE');
+      }
+      return;
+    }
+    lastSavedStateString = json;
+    localStorage.setItem('poker_mes_state', json);
     if (shouldBroadcast) {
       broadcastState('STATE_UPDATE');
     }
@@ -576,19 +633,9 @@ function loadLocalFallback() {
     const s = localStorage.getItem('poker_mes_state');
     if (s) {
       const parsed = JSON.parse(s);
-      if (parsed.players && parsed.players.length >= 8) {
+      if (parsed.players && parsed.players.length > 0) {
         Object.assign(GAME_STATE, parsed);
-      } else if (parsed.players && parsed.players.length > 0) {
-        const fullRoster = DEFAULT_PLAYERS.map(defP => {
-          const found = parsed.players.find(m => m.id === defP.id || m.name === defP.name);
-          return found ? { ...defP, ...found } : defP;
-        });
-        Object.assign(GAME_STATE, parsed);
-        GAME_STATE.players = fullRoster;
-      } else {
-        Object.assign(GAME_STATE, parsed);
-        GAME_STATE.players = JSON.parse(JSON.stringify(DEFAULT_PLAYERS));
-      }
+      } else resetGameStateMemory();
       notifyStateChanged();
     }
   } catch(e) {}
@@ -788,8 +835,12 @@ async function startNewHand(advanceDealer = true) {
     }
   });
 
-  // Post Small Blind
-  const sbPlayer = activeList.find(p => p.positionRole === 'SB') || activeList[1 % activeList.length];
+  // Post blinds. In heads-up, Dealer posts SB and the other player posts BB.
+  const isHeadsUp = activeList.length === 2;
+  const dealerPlayer = activeList.find(p => p.positionRole === 'D');
+  const sbPlayer = isHeadsUp
+    ? dealerPlayer
+    : (activeList.find(p => p.positionRole === 'SB') || activeList[1 % activeList.length]);
   if (sbPlayer) {
     const sbAmt = Math.min(sbPlayer.chips || 0, curBlind.sb);
     sbPlayer.chips -= sbAmt;
@@ -811,7 +862,9 @@ async function startNewHand(advanceDealer = true) {
   }
 
   // Post Big Blind
-  const bbPlayer = activeList.find(p => p.positionRole === 'BB') || activeList[2 % activeList.length];
+  const bbPlayer = isHeadsUp
+    ? activeList.find(p => p.id !== sbPlayer?.id)
+    : (activeList.find(p => p.positionRole === 'BB') || activeList[2 % activeList.length]);
   if (bbPlayer) {
     const bbAmt = Math.min(bbPlayer.chips || 0, curBlind.bb);
     bbPlayer.chips -= bbAmt;
@@ -1117,4 +1170,3 @@ async function resolveHandWinner(winnerId) {
   // Rotate Dealer, SB, BB and automatically start next hand
   await startNewHand(true);
 }
-
