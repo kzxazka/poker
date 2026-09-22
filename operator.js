@@ -134,12 +134,89 @@ async function init() {
 
 function tick() {
   if (isPaused) return;
-  const elapsed = Math.floor((Date.now() - GAME_STATE.eventStartTime) / 1000);
-  $opTimer.textContent = formatTime(elapsed);
+  const countdownSecs = getEventCountdownSecs();
+  $opTimer.textContent = formatTime(countdownSecs);
+  if (countdownSecs < 300) {
+    $opTimer.style.color = 'var(--red)';
+  } else {
+    $opTimer.style.color = '';
+  }
   const blind = getCurrentBlind();
   if (blind) $opBlind.textContent = `${blind.sb} / ${blind.bb}`;
   $opHand.textContent = `#${GAME_STATE.hand}`;
   $opCenter.textContent = `${GAME_STATE.centerMedals} 🏅`;
+}
+
+// ── ROLLING DEALER, SB, BB SYSTEM ─────────────────────────
+function rollDealerPositions(silent = false) {
+  const activePlayers = GAME_STATE.players.filter(p => p.status !== 'eliminated');
+  if (activePlayers.length < 2) return;
+
+  // Find current dealer index among active players
+  let curDealerIdx = activePlayers.findIndex(p => p.positionRole === 'D');
+  if (curDealerIdx === -1) curDealerIdx = 0;
+
+  // Clear all roles first
+  GAME_STATE.players.forEach(p => {
+    p.positionRole = null;
+    if (p.currentAction === 'DEALER' || p.currentAction === 'SMALL BLIND' || p.currentAction === 'BIG BLIND') {
+      p.currentAction = null;
+    }
+  });
+
+  // Calculate next positions (modulo active players)
+  const nextDealerIdx = (curDealerIdx + 1) % activePlayers.length;
+  const nextSbIdx = (nextDealerIdx + 1) % activePlayers.length;
+  const nextBbIdx = (nextDealerIdx + 2) % activePlayers.length;
+
+  activePlayers[nextDealerIdx].positionRole = 'D';
+  activePlayers[nextDealerIdx].currentAction = 'DEALER';
+
+  activePlayers[nextSbIdx].positionRole = 'SB';
+  activePlayers[nextSbIdx].currentAction = 'SMALL BLIND';
+
+  if (activePlayers.length > 2) {
+    activePlayers[nextBbIdx].positionRole = 'BB';
+    activePlayers[nextBbIdx].currentAction = 'BIG BLIND';
+  }
+
+  saveLocalState();
+  renderPlayerCards();
+
+  // Sync players and tournament to Supabase
+  GAME_STATE.players.forEach(p => syncPlayerToSupabase(p));
+  syncTournamentToSupabase();
+
+  if (!silent) {
+    const dName = activePlayers[nextDealerIdx].name;
+    const sbName = activePlayers[nextSbIdx].name;
+    const bbName = activePlayers.length > 2 ? activePlayers[nextBbIdx].name : '-';
+    showOpAlert(
+      "ROLLING DEALER SUKSES",
+      `Posisi meja berhasil dirotasi!\n• DEALER (D): ${dName}\n• SMALL BLIND (SB): ${sbName}\n• BIG BLIND (BB): ${bbName}`,
+      "green"
+    );
+  }
+}
+
+function rollDealerManually() {
+  showOpConfirm(
+    "ROLLING DEALER",
+    "Pindahkan posisi Dealer (D), Small Blind (SB), dan Big Blind (BB) ke pemain berikutnya secara berurutan?",
+    () => {
+      rollDealerPositions(false);
+    },
+    'gold'
+  );
+}
+
+// ── ADD TOURNAMENT TIME CONTROLLER ────────────────────────
+async function addTournamentTime(seconds) {
+  GAME_STATE.countdownTotalSecs = (GAME_STATE.countdownTotalSecs || (2 * 3600)) + seconds;
+  saveLocalState();
+  await syncTournamentToSupabase();
+  const mins = Math.round(seconds / 60);
+  showOpAlert("WAKTU DITAMBAHKAN", `Berhasil menambahkan +${mins} menit ke hitung mundur turnamen!`, "green");
 }
 
 async function togglePause() {
@@ -172,6 +249,15 @@ function buildPlayerCard(player) {
   if (player.status === 'lasttry') { badgeClass = 'badge-lasttry'; badgeText = 'LAST TRY USED'; }
   if (player.status === 'eliminated') { badgeClass = 'badge-eliminated'; badgeText = 'ELIMINATED'; }
 
+  let roleBadge = '';
+  if (player.positionRole === 'D') {
+    roleBadge = '<span style="font-size:10px;font-weight:800;background:var(--gold);color:#000;padding:2px 6px;border-radius:3px;margin-left:6px;">D</span>';
+  } else if (player.positionRole === 'SB') {
+    roleBadge = '<span style="font-size:10px;font-weight:800;background:#38bdf8;color:#000;padding:2px 6px;border-radius:3px;margin-left:6px;">SB</span>';
+  } else if (player.positionRole === 'BB') {
+    roleBadge = '<span style="font-size:10px;font-weight:800;background:#c084fc;color:#000;padding:2px 6px;border-radius:3px;margin-left:6px;">BB</span>';
+  }
+
   const isElim = player.status === 'eliminated';
   const chipsStr = isElim ? '—' : player.chips.toLocaleString();
   const medalsStr = String(player.medals);
@@ -192,7 +278,7 @@ function buildPlayerCard(player) {
 
   div.innerHTML = `
     <div class="op-card-top">
-      <div class="op-card-name">${player.name}</div>
+      <div class="op-card-name">${player.name} ${roleBadge}</div>
       <div class="op-card-status ${badgeClass}">${badgeText}</div>
     </div>
     <div class="op-card-stats">
@@ -458,6 +544,9 @@ function confirmHand() {
   GAME_STATE.hand++;
   pendingHandResult = null;
 
+  // Auto-roll Dealer, Small Blind, and Big Blind to next players
+  rollDealerPositions(true);
+
   saveState();
   renderPlayerCards();
   renderLog();
@@ -712,10 +801,11 @@ function openTimerSettings() {
   document.getElementById('timer-current-min').value = Math.floor(remainSecs / 60);
   document.getElementById('timer-current-sec').value = Math.floor(remainSecs % 60);
 
-  // Total elapsed game time
-  const elapsedSecs = Math.floor((Date.now() - GAME_STATE.eventStartTime) / 1000);
-  document.getElementById('timer-elapsed-hour').value = Math.floor(elapsedSecs / 3600);
-  document.getElementById('timer-elapsed-min').value = Math.floor((elapsedSecs % 3600) / 60);
+  // Current countdown remaining
+  const countdownSecs = getEventCountdownSecs();
+  document.getElementById('timer-countdown-hour').value = Math.floor(countdownSecs / 3600);
+  document.getElementById('timer-countdown-min').value = Math.floor((countdownSecs % 3600) / 60);
+  document.getElementById('timer-countdown-sec').value = Math.floor(countdownSecs % 60);
 
   openModal('modal-timer');
 }
@@ -725,8 +815,9 @@ async function saveTimerSettings() {
   const durationMin = parseInt(document.getElementById('timer-duration-min').value) || 15;
   const curMin = parseInt(document.getElementById('timer-current-min').value) || 0;
   const curSec = parseInt(document.getElementById('timer-current-sec').value) || 0;
-  const elpHour = parseInt(document.getElementById('timer-elapsed-hour').value) || 0;
-  const elpMin = parseInt(document.getElementById('timer-elapsed-min').value) || 0;
+  const ctdHour = parseInt(document.getElementById('timer-countdown-hour').value) || 0;
+  const ctdMin = parseInt(document.getElementById('timer-countdown-min').value) || 0;
+  const ctdSec = parseInt(document.getElementById('timer-countdown-sec').value) || 0;
 
   // Update Game State
   GAME_STATE.blindLevel = newLevel;
@@ -737,9 +828,10 @@ async function saveTimerSettings() {
   const elapsedInLevel = Math.max(0, GAME_STATE.blindIntervalSecs - desiredRemainSecs);
   GAME_STATE.lastBlindChangeTime = Date.now() - (elapsedInLevel * 1000);
 
-  // Set total elapsed game time
-  const desiredTotalElapsed = (elpHour * 3600) + (elpMin * 60);
-  GAME_STATE.eventStartTime = Date.now() - (desiredTotalElapsed * 1000);
+  // Set countdown total and event start time
+  const desiredRemainingCtd = (ctdHour * 3600) + (ctdMin * 60) + ctdSec;
+  GAME_STATE.countdownTotalSecs = desiredRemainingCtd;
+  GAME_STATE.eventStartTime = Date.now();
 
   saveLocalState();
   closeModal('modal-timer');
@@ -747,18 +839,17 @@ async function saveTimerSettings() {
 
   // Sync to Supabase
   await syncTournamentToSupabase();
+  showOpAlert("TIMER DISIMPAN", "Pengaturan blind level dan timer countdown turnamen berhasil diperbarui!", "green");
 }
 
 function resetTimerToStart() {
   showOpConfirm(
-    "RESET TIMER PERTANDINGAN",
-    "Apakah Anda yakin ingin mereset timer pertandingan ke 00:00:00 dan countdown durasi level kembali penuh?",
+    "RESET TIMER COUNTDOWN",
+    "Apakah Anda yakin ingin mereset timer countdown pertandingan ke 2 jam penuh?",
     () => {
-      const durationMin = parseInt(document.getElementById('timer-duration-min').value) || 15;
-      document.getElementById('timer-current-min').value = durationMin;
-      document.getElementById('timer-current-sec').value = 0;
-      document.getElementById('timer-elapsed-hour').value = 0;
-      document.getElementById('timer-elapsed-min').value = 0;
+      document.getElementById('timer-countdown-hour').value = 2;
+      document.getElementById('timer-countdown-min').value = 0;
+      document.getElementById('timer-countdown-sec').value = 0;
     },
     'gold'
   );

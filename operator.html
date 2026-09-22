@@ -36,12 +36,19 @@
         <span class="op-info-label">CENTER</span>
         <span class="op-info-value gold" id="op-center">11 🏅</span>
       </div>
-      <div class="op-info-chip" style="cursor: pointer;" onclick="openTimerSettings()" title="Klik untuk edit timer">
-        <span class="op-info-label">TIMER ⚙</span>
+      <div class="op-info-chip" style="cursor: pointer;" onclick="openTimerSettings()" title="Klik untuk edit timer atau tambah waktu">
+        <span class="op-info-label">COUNTDOWN ⏳</span>
         <span class="op-info-value mono" id="op-timer">00:00:00</span>
+      </div>
+      <!-- Quick Add Time Buttons for Operator -->
+      <div style="display:flex;gap:4px;align-items:center;">
+        <button class="op-btn op-btn-secondary op-btn-sm" onclick="addTournamentTime(60)" title="Tambah 1 Menit">+1M</button>
+        <button class="op-btn op-btn-secondary op-btn-sm" onclick="addTournamentTime(300)" title="Tambah 5 Menit">+5M</button>
+        <button class="op-btn op-btn-secondary op-btn-sm" onclick="addTournamentTime(600)" title="Tambah 10 Menit">+10M</button>
       </div>
     </div>
     <div class="op-header-right">
+      <button class="op-btn op-btn-secondary" onclick="rollDealerManually()" title="Pindahkan posisi Dealer (D), SB, dan BB ke pemain berikutnya">🔄 ROLL DEALER</button>
       <button class="op-btn op-btn-secondary" onclick="openTimerSettings()">⏱ TIMER SETTINGS</button>
       <button class="op-btn op-btn-secondary" id="btn-pause" onclick="togglePause()">⏸ PAUSE</button>
       <button class="op-btn op-btn-gold" id="btn-newhand" onclick="openNewHand()">+ NEW HAND</button>
@@ -168,15 +175,26 @@
         </div>
 
         <div class="form-row">
-          <label class="form-label">TOTAL ELAPSED GAME TIME (JAM : MENIT)</label>
+          <label class="form-label">SISA WAKTU COUNTDOWN TURNAMEN (JAM : MENIT : DETIK)</label>
           <div style="display:flex;gap:8px;">
-            <input type="number" id="timer-elapsed-hour" min="0" placeholder="Jam" class="form-input" style="flex:1;" />
-            <input type="number" id="timer-elapsed-min" min="0" max="59" placeholder="Menit" class="form-input" style="flex:1;" />
+            <input type="number" id="timer-countdown-hour" min="0" placeholder="Jam" class="form-input" style="flex:1;" />
+            <input type="number" id="timer-countdown-min" min="0" max="59" placeholder="Menit" class="form-input" style="flex:1;" />
+            <input type="number" id="timer-countdown-sec" min="0" max="59" placeholder="Detik" class="form-input" style="flex:1;" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">TAMBAH WAKTU CEPAT KE TURNAMEN</label>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="addTournamentTime(300)">+5 Menit</button>
+            <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="addTournamentTime(600)">+10 Menit</button>
+            <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="addTournamentTime(900)">+15 Menit</button>
+            <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="addTournamentTime(1800)">+30 Menit</button>
           </div>
         </div>
 
         <div style="display:flex;gap:6px;margin-top:4px;">
-          <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="resetTimerToStart()">🔄 Reset Timer Awal</button>
+          <button type="button" class="op-btn op-btn-secondary op-btn-sm" style="flex:1;" onclick="resetTimerToStart()">🔄 Reset Countdown ke 2 Jam</button>
         </div>
       </div>
       <div class="modal-footer">

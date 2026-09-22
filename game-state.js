@@ -6,6 +6,7 @@ const GAME_STATE = {
   title: 'POKER MES',
   hand: 24,
   eventStartTime: Date.now() - (83 * 60 + 42) * 1000,
+  countdownTotalSecs: 2 * 3600, // Default 2 hours countdown
   blindLevel: 1,
   blindSchedule: [
     { level: 1,  sb: 25,   bb: 50   },
@@ -248,6 +249,12 @@ function getNextBlind() {
 function getBlindCountdownSecs() {
   const elapsed = (Date.now() - GAME_STATE.lastBlindChangeTime) / 1000;
   return Math.max(0, GAME_STATE.blindIntervalSecs - elapsed);
+}
+
+function getEventCountdownSecs() {
+  const total = GAME_STATE.countdownTotalSecs || (2 * 3600);
+  const elapsed = (Date.now() - GAME_STATE.eventStartTime) / 1000;
+  return Math.max(0, total - elapsed);
 }
 
 function formatTime(totalSecs) {

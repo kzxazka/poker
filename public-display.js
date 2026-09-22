@@ -369,8 +369,14 @@ function renderBlindSchedule() {
 function tick() {
   if (GAME_STATE.isPaused) return;
 
-  const elapsedSecs = Math.floor((Date.now() - GAME_STATE.eventStartTime) / 1000);
-  $eventTimer.textContent = formatTime(elapsedSecs);
+  const countdownSecs = getEventCountdownSecs();
+  $eventTimer.textContent = formatTime(countdownSecs);
+
+  if (countdownSecs < 300) {
+    $eventTimer.classList.add('text-amber-400');
+  } else {
+    $eventTimer.classList.remove('text-amber-400');
+  }
 
   const blindSecs = getBlindCountdownSecs();
   $blindCountdown.textContent = formatTime(blindSecs);

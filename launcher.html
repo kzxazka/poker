@@ -70,6 +70,21 @@
       background: #252e42;
       border-radius: 4px;
     }
+
+    /* Drag and Drop styling */
+    .player-row-dragging {
+      opacity: 0.4;
+      background-color: rgba(234, 179, 8, 0.15) !important;
+    }
+    .player-row-over {
+      border-top: 2px solid #eab308 !important;
+    }
+    .drag-handle {
+      cursor: grab;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+    }
   </style>
 </head>
 
@@ -439,6 +454,7 @@
               <table class="w-full text-left text-xs font-mono">
                 <thead>
                   <tr class="text-slate-400 border-b border-slate-800 pb-2">
+                    <th class="py-2 px-1 w-8 text-center" title="Drag untuk mengubah urutan">URUT</th>
                     <th class="py-2 px-1 w-12 text-center">SEAT</th>
                     <th class="py-2 px-2">NAMA PEMAIN</th>
                     <th class="py-2 px-2 w-28">START CHIPS</th>
@@ -465,10 +481,9 @@
           <!-- Quick Tip -->
           <div
             class="p-3.5 rounded-lg bg-slate-900/50 border border-slate-800 text-xs text-slate-400 flex items-start gap-3 font-mono">
-            <i class="fa-solid fa-circle-info text-brand-cyan text-sm mt-0.5"></i>
+            <i class="fa-solid fa-arrows-up-down text-brand-gold text-sm mt-0.5"></i>
             <div>
-              <strong class="text-slate-300">Tips Sinkronisasi:</strong> Saat Anda mengklik tombol "Mulai Turnamen",
-              seluruh pemain dan konfigurasi blind/timer ini akan langsung disimpan ke Supabase Cloud.
+              <strong class="text-slate-300">Urutan Pemain Drag & Drop:</strong> Tarik ikon handle <i class="fa-solid fa-grip-vertical text-slate-400 mx-0.5"></i> untuk menukar posisi duduk pemain. Posisi Dealer (D), SB, dan BB akan langsung otomatis mengikuti urutan 3 pemain teratas!
             </div>
           </div>
         </div>
@@ -491,7 +506,7 @@
                   <label class="block text-slate-400 mb-1 text-[11px] font-bold">SMALL BLIND (SB)</label>
                   <div class="flex items-center gap-1">
                     <span class="text-slate-500">C</span>
-                    <input id="inputSB" type="number" value="25" step="25" min="25" onchange="onSBChange(this.value)"
+                    <input id="inputSB" type="number" value="25" step="25" min="25" oninput="onSBChange(this.value)"
                       class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-white font-bold text-sm focus:border-brand-gold focus:outline-none" />
                   </div>
                   <span class="text-[9px] text-slate-500 mt-1 block">Kelipatan 25</span>
@@ -500,18 +515,18 @@
                   <label class="block text-slate-400 mb-1 text-[11px] font-bold">BIG BLIND (BB)</label>
                   <div class="flex items-center gap-1">
                     <span class="text-slate-500">C</span>
-                    <input id="inputBB" type="number" value="50" step="50" min="50"
+                    <input id="inputBB" type="number" value="50" step="50" min="50" oninput="onBBChange(this.value)"
                       class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-white font-bold text-sm focus:border-brand-gold focus:outline-none" />
                   </div>
-                  <span class="text-[9px] text-slate-500 mt-1 block">Kelipatan 50</span>
+                  <span class="text-[9px] text-slate-500 mt-1 block">Kelipatan 50 (Otomatis 2x SB)</span>
                 </div>
               </div>
 
               <!-- Starting Blind Level & Blind Duration -->
               <div class="grid grid-cols-2 gap-3">
                 <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                  <label class="block text-slate-400 mb-1 text-[11px] font-bold">LEVEL AWAL</label>
-                  <select id="selectStartingLevel"
+                  <label class="block text-slate-400 mb-1 text-[11px] font-bold">KENAIKAN BLIND (LEVEL)</label>
+                  <select id="selectStartingLevel" onchange="onLevelChange(this.value)"
                     class="w-full bg-slate-800 border border-slate-700 text-white rounded px-2 py-1.5 text-xs font-bold focus:border-brand-gold focus:outline-none">
                     <option value="1" selected>Level 1 (25 / 50)</option>
                     <option value="2">Level 2 (50 / 100)</option>
@@ -521,7 +536,7 @@
                   </select>
                 </div>
                 <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                  <label class="block text-slate-400 mb-1 text-[11px] font-bold">DURASI LEVEL</label>
+                  <label class="block text-slate-400 mb-1 text-[11px] font-bold">DURASI TIAP LEVEL</label>
                   <select id="selectBlindTimer"
                     class="w-full bg-slate-800 border border-slate-700 text-white rounded px-2 py-1.5 text-xs font-bold focus:border-brand-gold focus:outline-none">
                     <option value="10">10 Menit</option>
@@ -532,19 +547,21 @@
                 </div>
               </div>
 
-              <!-- Custom Initial Elapsed Timer -->
+              <!-- Custom Initial Countdown Timer -->
               <div class="bg-slate-900/80 p-3.5 rounded-lg border border-slate-800">
-                <span class="text-slate-200 font-bold block text-xs mb-1">TIMER AWAL PERTANDINGAN</span>
-                <span class="text-[11px] text-slate-400 block mb-2">Set waktu pertandingan jika melanjutkan
-                  turnamen:</span>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-slate-200 font-bold block text-xs">HITUNG MUNDUR TIMER TURNAMEN</span>
+                  <span class="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">COUNTDOWN</span>
+                </div>
+                <span class="text-[11px] text-slate-400 block mb-2">Durasi total turnamen yang akan dihitung mundur (operator dapat menambah waktu):</span>
                 <div class="flex items-center gap-2">
                   <div class="flex items-center gap-1 flex-1">
-                    <input id="inputElapsedHour" type="number" min="0" max="23" value="0"
+                    <input id="inputCountdownHour" type="number" min="0" max="23" value="2"
                       class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-white font-bold" />
                     <span class="text-slate-500">Jam</span>
                   </div>
                   <div class="flex items-center gap-1 flex-1">
-                    <input id="inputElapsedMin" type="number" min="0" max="59" value="0"
+                    <input id="inputCountdownMin" type="number" min="0" max="59" value="0"
                       class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-white font-bold" />
                     <span class="text-slate-500">Mnt</span>
                   </div>
@@ -787,6 +804,7 @@
         // Fallback default structure
         loadDefaultRoster();
       }
+      refreshPlayerPositions();
       renderPlayerTable();
 
       // 2. Populate blind schedules dropdown
@@ -820,6 +838,52 @@
         if (b.level === (GAME_STATE.blindLevel || 1)) opt.selected = true;
         sel.appendChild(opt);
       });
+
+      // Also sync current SB and BB inputs from selected level
+      const cur = GAME_STATE.blindSchedule.find(b => b.level === (GAME_STATE.blindLevel || 1));
+      if (cur) {
+        document.getElementById('inputSB').value = cur.sb;
+        document.getElementById('inputBB').value = cur.bb;
+      }
+    }
+
+    // Mutual synchronization between SB, BB, and Level
+    function onSBChange(val) {
+      let sb = parseInt(val) || 25;
+      if (sb < 25) sb = 25;
+      const bb = sb * 2;
+      document.getElementById('inputSB').value = sb;
+      document.getElementById('inputBB').value = bb;
+
+      // Match with level in blindSchedule or update closest
+      const match = (GAME_STATE.blindSchedule || []).find(b => b.sb === sb && b.bb === bb);
+      const sel = document.getElementById('selectStartingLevel');
+      if (match && sel) {
+        sel.value = String(match.level);
+      }
+    }
+
+    function onBBChange(val) {
+      let bb = parseInt(val) || 50;
+      if (bb < 50) bb = 50;
+      const sb = Math.floor(bb / 2);
+      document.getElementById('inputSB').value = sb;
+      document.getElementById('inputBB').value = bb;
+
+      const match = (GAME_STATE.blindSchedule || []).find(b => b.sb === sb && b.bb === bb);
+      const sel = document.getElementById('selectStartingLevel');
+      if (match && sel) {
+        sel.value = String(match.level);
+      }
+    }
+
+    function onLevelChange(levelVal) {
+      const lvl = parseInt(levelVal) || 1;
+      const schedule = (GAME_STATE.blindSchedule || []).find(b => b.level === lvl);
+      if (schedule) {
+        document.getElementById('inputSB').value = schedule.sb;
+        document.getElementById('inputBB').value = schedule.bb;
+      }
     }
 
     function goToStep(stepId) {
@@ -845,6 +909,7 @@
         } else if (stepId === 'stepSetupPoker') {
           pill2.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-700 bg-brand-panel text-slate-300";
           pill3.className = "flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand-gold bg-brand-panel text-brand-gold shadow-glowGold";
+          refreshPlayerPositions();
           renderPlayerTable();
         }
       }
@@ -853,11 +918,6 @@
 
     function resetToWelcome() {
       goToStep('stepWelcome');
-    }
-
-    function onSBChange(val) {
-      const sb = parseInt(val) || 25;
-      document.getElementById('inputBB').value = sb * 2;
     }
 
     function toggleAnteInput() {
@@ -870,6 +930,21 @@
       }
     }
 
+    // Refresh seat numbers and auto-assign positions (Seat 1 = D, Seat 2 = SB, Seat 3 = BB)
+    function refreshPlayerPositions() {
+      players.forEach((p, idx) => {
+        p.id = idx + 1;
+        p.seat = String(idx + 1).padStart(2, '0');
+        if (idx === 0) p.position = 'D';
+        else if (idx === 1) p.position = 'SB';
+        else if (idx === 2) p.position = 'BB';
+        else p.position = '';
+      });
+    }
+
+    // Drag and Drop Variables
+    let dragSrcIndex = null;
+
     function renderPlayerTable() {
       const tbody = document.getElementById('playerTableBody');
       tbody.innerHTML = '';
@@ -881,7 +956,7 @@
 
         let posBadge = '<span class="text-slate-600">-</span>';
         if (p.position === 'D') {
-          posBadge = '<span class="px-2 py-0.5 rounded bg-brand-gold text-black font-bold text-[10px]">D</span>';
+          posBadge = '<span class="px-2 py-0.5 rounded bg-brand-gold text-black font-bold text-[10px] shadow-glowGold">D</span>';
         } else if (p.position === 'SB') {
           posBadge = '<span class="px-2 py-0.5 rounded bg-brand-cyan text-black font-bold text-[10px]">SB</span>';
         } else if (p.position === 'BB') {
@@ -889,8 +964,48 @@
         }
 
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-800/40 transition";
+        tr.className = "hover:bg-slate-800/40 transition select-none";
+        tr.draggable = true;
+        tr.dataset.index = idx;
+
+        // Drag & Drop listeners
+        tr.addEventListener('dragstart', (e) => {
+          dragSrcIndex = idx;
+          tr.classList.add('player-row-dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        tr.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          tr.classList.add('player-row-over');
+        });
+
+        tr.addEventListener('dragleave', () => {
+          tr.classList.remove('player-row-over');
+        });
+
+        tr.addEventListener('dragend', () => {
+          tr.classList.remove('player-row-dragging');
+          document.querySelectorAll('#playerTableBody tr').forEach(r => r.classList.remove('player-row-over'));
+        });
+
+        tr.addEventListener('drop', (e) => {
+          e.stopPropagation();
+          tr.classList.remove('player-row-over');
+          if (dragSrcIndex !== null && dragSrcIndex !== idx) {
+            // Swap players in array
+            const movedPlayer = players.splice(dragSrcIndex, 1)[0];
+            players.splice(idx, 0, movedPlayer);
+            refreshPlayerPositions();
+            renderPlayerTable();
+          }
+        });
+
         tr.innerHTML = `
+          <td class="py-2.5 px-1 text-center text-slate-500 hover:text-brand-gold drag-handle" title="Tarik baris ini untuk memindah urutan kursi">
+            <i class="fa-solid fa-grip-vertical text-sm"></i>
+          </td>
           <td class="py-2.5 px-1 text-center font-bold text-slate-400">${p.seat}</td>
           <td class="py-2.5 px-2">
             <input type="text" value="${p.name}" onchange="updatePlayerName(${idx}, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-bold focus:border-brand-gold focus:outline-none uppercase" />
@@ -905,7 +1020,7 @@
             ${posBadge}
           </td>
           <td class="py-2.5 px-1 text-center">
-            <button type="button" onclick="removePlayerRow(${idx})" class="text-slate-500 hover:text-red-400 transition">
+            <button type="button" onclick="removePlayerRow(${idx})" class="text-slate-500 hover:text-red-400 transition" title="Hapus Pemain">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </td>
@@ -966,14 +1081,7 @@
         return;
       }
       players.splice(index, 1);
-      players.forEach((p, idx) => {
-        p.id = idx + 1;
-        p.seat = (idx + 1).toString().padStart(2, '0');
-        if (idx === 0) p.position = 'D';
-        else if (idx === 1) p.position = 'SB';
-        else if (idx === 2) p.position = 'BB';
-        else p.position = '';
-      });
+      refreshPlayerPositions();
       renderPlayerTable();
     }
 
@@ -993,10 +1101,11 @@
         seat: newIndex.toString().padStart(2, '0'),
         name: `PLAYER ${newIndex}`,
         chips: 1000,
-        medals: 2,
+        medals: 0,
         position: '',
         status: 'active'
       });
+      refreshPlayerPositions();
       renderPlayerTable();
     }
 
@@ -1011,6 +1120,7 @@
         { id: 7, seat: '07', name: 'ZORA', chips: 1600, medals: 0, position: '', status: 'active' },
         { id: 8, seat: '08', name: 'ISMAIL', chips: 1600, medals: 0, position: '', status: 'active' }
       ];
+      refreshPlayerPositions();
       renderPlayerTable();
     }
 
@@ -1029,16 +1139,16 @@
       try {
         const startLevel = parseInt(document.getElementById('selectStartingLevel').value) || 1;
         const durationMin = parseInt(document.getElementById('selectBlindTimer').value) || 15;
-        const elpHour = parseInt(document.getElementById('inputElapsedHour').value) || 0;
-        const elpMin = parseInt(document.getElementById('inputElapsedMin').value) || 0;
+        const ctdHour = parseInt(document.getElementById('inputCountdownHour').value) || 0;
+        const ctdMin = parseInt(document.getElementById('inputCountdownMin').value) || 0;
         const totalMedalsVal = parseInt(document.getElementById('inputCenterMedals').value) || 25;
         const rupiahPerMedal = parseInt(document.getElementById('inputRupiahPerMedal').value) || 2000;
 
         const sb = getSupabase();
 
         // 1. Update tournaments table
-        const totalElapsedSecs = (elpHour * 3600) + (elpMin * 60);
-        const eventStartTime = new Date(Date.now() - (totalElapsedSecs * 1000)).toISOString();
+        const countdownDurationSecs = (ctdHour * 3600) + (ctdMin * 60);
+        const eventStartTime = new Date().toISOString();
         const lastBlindChangeTime = new Date().toISOString();
 
         if (sb) {
@@ -1082,7 +1192,8 @@
         GAME_STATE.hand = 1;
         GAME_STATE.blindLevel = startLevel;
         GAME_STATE.blindIntervalSecs = durationMin * 60;
-        GAME_STATE.eventStartTime = Date.now() - (totalElapsedSecs * 1000);
+        GAME_STATE.countdownTotalSecs = countdownDurationSecs;
+        GAME_STATE.eventStartTime = Date.now();
         GAME_STATE.lastBlindChangeTime = Date.now();
         GAME_STATE.totalMedals = totalMedalsVal;
         saveLocalState();
