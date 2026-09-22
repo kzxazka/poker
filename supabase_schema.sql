@@ -75,11 +75,36 @@ CREATE POLICY "Allow all public on players" ON public.players FOR ALL USING (tru
 CREATE POLICY "Allow all public on blind_schedules" ON public.blind_schedules FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all public on hand_history" ON public.hand_history FOR ALL USING (true) WITH CHECK (true);
 
--- 6. Enable Realtime Publications
-ALTER PUBLICATION supabase_realtime ADD TABLE public.tournaments;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.players;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.blind_schedules;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.hand_history;
+-- 6. Enable Realtime Publications (Idempotent / Aman jika sudah terdaftar)
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'tournaments'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.tournaments;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'players'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.players;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'blind_schedules'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.blind_schedules;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'hand_history'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.hand_history;
+    END IF;
+END $$;
 
 -- 7. Seed Official 1:2 Blind Structure (SB kelipatan 25, BB kelipatan 50)
 INSERT INTO public.blind_schedules (level, sb, bb, ante) VALUES
